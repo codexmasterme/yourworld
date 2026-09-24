@@ -1,0 +1,1954 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小橘块眼中的世界</title>
+<meta name="description" content="一部 100 秒的像素短片：Claude Code 的吉祥物小橘块，在它眼中的终端世界里接信、找文件、修 bug、跑测试、提交代码。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;900&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --ground: #0d0c0b;
+    --surface: #161412;
+    --surface-2: #1f1c19;
+    --line: #2e2a26;
+    --line-strong: #4a443d;
+    --text: #ede8e0;
+    --muted: #9b9288;
+    --faint: #6b645c;
+    --claude: #d77757;
+    --permission: #b1b9f9;
+    --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
+    --sans: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--ground); }
+  body {
+    margin: 0;
+    padding-inline: 16px;
+    background: var(--ground) radial-gradient(1100px 520px at 50% -200px, rgba(215, 119, 87, 0.11), transparent 70%) no-repeat;
+    color: var(--text);
+    font: 15px/1.7 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 56px; display: grid; gap: 30px; }
+
+  .masthead { display: grid; gap: 12px; }
+  .eyebrow {
+    margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    font: 500 12px/1.4 var(--mono); letter-spacing: 0.08em; color: var(--muted);
+  }
+  .eyebrow i { width: 4px; height: 4px; background: var(--faint); }
+  h1 {
+    margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.32em;
+    font: 900 clamp(34px, 6.4vw, 64px)/1.08 var(--serif); letter-spacing: 0.02em; text-wrap: balance;
+  }
+  h1 svg { width: 1.22em; height: auto; flex: none; }
+  .lede { margin: 0; max-width: 38em; color: var(--muted); font-size: 16px; }
+
+  .player { display: grid; gap: 12px; }
+  .stage {
+    position: relative; overflow: hidden; max-width: 100%; aspect-ratio: 16 / 9;
+    background: #000; border: 1px solid var(--line); border-radius: 10px;
+  }
+  #film { display: block; width: 100%; height: 100%; cursor: pointer; }
+  .stage:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border: 0; border-radius: 0; display: grid; place-items: center; }
+  .stage:fullscreen #film { width: min(100vw, 177.78vh); height: auto; aspect-ratio: 16 / 9; }
+  .bigplay {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: inline-flex; align-items: center; gap: 10px; padding: 12px 22px;
+    border: 1px solid rgba(215, 119, 87, 0.6); border-radius: 999px;
+    background: rgba(13, 12, 11, 0.82); color: var(--text); cursor: pointer;
+    font: 700 16px/1 var(--sans);
+  }
+  .bigplay svg { width: 14px; height: 14px; color: var(--claude); }
+
+  .controls { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    flex: none; width: 38px; height: 38px; display: grid; place-items: center; padding: 0;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); cursor: pointer;
+  }
+  .btn:hover { border-color: var(--line-strong); }
+  .btn svg { width: 16px; height: 16px; }
+  .btn[aria-pressed="true"] { color: var(--claude); border-color: rgba(215, 119, 87, 0.55); }
+  .btn:focus-visible, .seek:focus-visible, .chapter:focus-visible, .bigplay:focus-visible {
+    outline: 2px solid var(--permission); outline-offset: 2px;
+  }
+  .scrub { position: relative; flex: 1; min-width: 0; height: 38px; display: flex; align-items: center; }
+  .ticks { position: absolute; left: 7px; right: 7px; top: 50%; pointer-events: none; }
+  .ticks i { position: absolute; top: -12px; width: 2px; height: 5px; background: var(--faint); transform: translateX(-1px); }
+  .seek { width: 100%; height: 38px; margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+  .seek::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--claude) var(--pct, 0%), var(--line) var(--pct, 0%));
+  }
+  .seek::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px;
+    border-radius: 50%; border: 2px solid var(--ground); background: var(--claude);
+  }
+  .seek::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+  .seek::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--claude); }
+  .seek::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ground); background: var(--claude); }
+  .time { flex: none; font: 500 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .legend { display: grid; gap: 6px; }
+  .legend h2 { margin: 0; font: 700 22px/1.3 var(--serif); text-wrap: balance; }
+  .legend .note { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .chapters { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .chapter {
+    width: 100%; display: grid; align-items: baseline; gap: 18px;
+    grid-template-columns: 2.6em minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1.35fr);
+    padding: 14px 12px; border: 0; border-bottom: 1px solid var(--line);
+    background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .chapter:hover { background: var(--surface); }
+  .chapter[aria-current="true"] { background: var(--surface); }
+  .chapter[aria-current="true"] .num { color: var(--claude); }
+  .num { font: 900 22px/1 var(--serif); color: var(--faint); }
+  .ttl { display: grid; gap: 2px; }
+  .ttl b { font: 700 16px/1.4 var(--serif); }
+  .ttl span { font: 12px/1.4 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .col { font-size: 14px; line-height: 1.6; }
+  .col small { display: block; margin-bottom: 2px; font: 500 11px/1.4 var(--sans); letter-spacing: 0.12em; color: var(--faint); }
+  .col.real { color: var(--muted); }
+  .col code { font: 12.5px var(--mono); color: var(--text); }
+
+  footer { display: grid; gap: 6px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
+  footer p { margin: 0; max-width: 60em; }
+  .inline-clawd { width: 1.7em; height: auto; vertical-align: -0.15em; margin-inline: 0.15em; }
+  kbd {
+    padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    font: 12px var(--mono); color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    .chapter { grid-template-columns: 2.2em minmax(0, 1fr); gap: 6px 12px; }
+    .chapter .col { grid-column: 2; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding-block: 28px 40px; gap: 24px; }
+    .controls { flex-wrap: wrap; }
+    .scrub { order: 10; flex-basis: 100%; }
+    .time { margin-left: auto; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="masthead">
+    <p class="eyebrow"><span>像素短片</span><i></i><span>1 分 42 秒</span><i></i><span>非官方同人</span></p>
+    <h1>
+      <svg viewBox="0 0 16 10" aria-hidden="true" shape-rendering="crispEdges">
+        <path fill="#d77757" d="M2 0h12v8H2zM0 4h16v2H0zM3 8h1v2H3zM5 8h1v2H5zM10 8h1v2h-1zM12 8h1v2h-1z"/>
+        <path fill="#000" d="M4 2h1v2H4zM11 2h1v2h-1z"/>
+      </svg>
+      小橘块眼中的世界
+    </h1>
+    <p class="lede">你在终端里敲下一句话，它接住这句话，走进你的项目，一路找、一路修。你看到的是一行行文字；在它眼里，那是一整个世界。</p>
+  </header>
+
+  <section class="player" aria-label="短片播放器">
+    <div class="stage">
+      <canvas id="film" width="1280" height="720" role="img"
+        aria-label="像素动画：Claude Code 的吉祥物小橘块，在它眼中的终端世界里接信、找文件、修 bug、跑测试、提交代码，最后回到输入框旁边。"></canvas>
+      <button class="bigplay" id="bigplay" type="button" hidden>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11l9-5.5z"/></svg><span>播放</span>
+      </button>
+    </div>
+    <div class="controls">
+      <button class="btn" id="play" type="button" aria-label="暂停">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" fill="currentColor" d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg>
+      </button>
+      <button class="btn" id="restart" type="button" aria-label="从头播放">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5"/><path fill="currentColor" d="M2.2 1.8v4.4h4.4z"/></svg>
+      </button>
+      <div class="scrub">
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <input class="seek" id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+      </div>
+      <span class="time" id="time">0:00 / 1:42</span>
+      <button class="btn" id="sound" type="button" aria-pressed="false" aria-label="打开声音">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 6h2.6L8 3v10L4.6 10H2z"/><path id="sound-waves" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M11 5.5l3 5M14 5.5l-3 5"/></svg>
+      </button>
+      <button class="btn" id="full" type="button" aria-label="全屏">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>
+      </button>
+    </div>
+    <p class="sr" id="live" aria-live="polite"></p>
+  </section>
+
+  <section class="legend" aria-labelledby="legend-title">
+    <h2 id="legend-title">它眼中的，和你眼中的</h2>
+    <p class="note">每一幕都对应 Claude Code 里真实发生的一件事。点一行，跳到那一幕。</p>
+    <ol class="chapters" id="chapters"></ol>
+  </section>
+
+  <footer>
+    <p><kbd>空格</kbd> 播放 / 暂停　<kbd>←</kbd> <kbd>→</kbd> 快退 / 快进 5 秒　点画面也可以暂停</p>
+    <p>这是一部非官方的同人短片。小橘块在 Claude Code 的源码里叫 clawd，就是启动时终端里那只
+      <svg class="inline-clawd" viewBox="0 0 16 10" aria-hidden="true" shape-rendering="crispEdges"><path fill="#d77757" d="M2 0h12v8H2zM0 4h16v2H0zM3 8h1v2H3zM5 8h1v2H5zM10 8h1v2h-1zM12 8h1v2h-1z"/><path fill="#000" d="M4 2h1v2H4zM11 2h1v2h-1z"/></svg>
+      小家伙。片中它的像素造型、身上的橘色、头顶转圈的小星星和 “Pondering…” 这类词，都照着 Claude Code 自己的界面来画。</p>
+  </footer>
+</main>
+<script>
+(() => {
+'use strict';
+
+// ─── Palette ────────────────────────────────────────────────────────────────
+// Named colors are Claude Code's own dark-theme values (clawd_body,
+// claudeShimmer, permission, bashBorder, success, diffAdded …).
+const C = {
+  ink: '#000000', body: '#d77757', shimmer: '#eb9f7f', permission: '#b1b9f9', plan: '#48968c',
+  bash: '#fd5db1', success: '#4eba65', error: '#ff6b80', warning: '#ffc107', ide: '#4782c8',
+  diffAdd: '#225c2b', diffAddWord: '#38a660', diffDel: '#7a2936', diffDelWord: '#b3596b',
+  userBg: '#373737', inactive: '#999999', subtle: '#505050', rule: '#888888', white: '#ffffff',
+  sky0: '#060505', sky1: '#100d0b', sky2: '#1a1410',
+  stone: '#1f1b18', stoneHi: '#302924', stoneLo: '#110f0d',
+  dim: '#8a8279', faint: '#4d4741', paper: '#f1e7d6', caption: '#f5f0e8',
+};
+const FAM = {
+  mono: '"JetBrains Mono", "Noto Sans SC", ui-monospace, Menlo, Consolas, monospace',
+  serif: '"Noto Serif SC", "Songti SC", "STSong", serif',
+  sans: '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
+};
+const F = (px, fam = 'mono', w = 400) => `${w} ${px.toFixed(2)}px ${FAM[fam]}`;
+
+// ─── Math ───────────────────────────────────────────────────────────────────
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  inOut: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+  out: t => 1 - (1 - t) * (1 - t),
+  out3: t => 1 - Math.pow(1 - t, 3),
+  in2: t => t * t,
+  in3: t => t * t * t,
+  sine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+  back: t => { const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+};
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// fade in over [a, a+fi], hold, fade out over [b-fo, b]
+const win = (t, a, b, fi = 0.3, fo = 0.3) => seg(t, a, a + fi) * (1 - seg(t, b - fo, b));
+// a blink of ~0.13 s every `period` seconds
+const blinking = (t, period, off = 0) => ((t + off) % period + period) % period < 0.13;
+
+// ─── Canvas & camera ────────────────────────────────────────────────────────
+// The world is 320 × 180 units; the camera maps world units to device pixels.
+const cv = document.getElementById('film');
+const ctx = cv.getContext('2d', { alpha: false });
+const WW = 320, WH = 180;
+let CW = 1280, CH = 720, S = 4, DPR = 1, US = 4, fixedSize = false;
+const cam = { x: 160, y: 90, z: 1 };
+const setCam = (x, y, z = 1) => { cam.x = x; cam.y = y; cam.z = z; };
+const TX = x => (x - cam.x) * S * cam.z + CW / 2;
+const TY = y => (y - cam.y) * S * cam.z + CH / 2;
+const TL = v => v * S * cam.z;
+
+function fit() {
+  if (fixedSize) return;
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(320, Math.round((r.width || 960) * DPR));
+  const h = Math.round(w * 9 / 16);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  CW = w; CH = h; S = CW / WW;
+  // UI text (HUD, captions) never drops below a readable size on small screens
+  US = Math.max(S, 2.4 * DPR);
+}
+function setFixedSize(w, h) {
+  fixedSize = true; DPR = 1;
+  cv.width = w; cv.height = h; CW = w; CH = h; S = CW / WW; US = S;
+}
+
+// keyframed camera: [[t, x, y, zoom], …] eased between keys, zoom interpolated geometrically
+function camKeys(t, keys) {
+  if (t <= keys[0][0]) return setCam(keys[0][1], keys[0][2], keys[0][3]);
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, x1, y1, z1] = keys[i];
+    if (t <= t1) {
+      const [t0, x0, y0, z0] = keys[i - 1];
+      const e = E.inOut((t - t0) / (t1 - t0));
+      return setCam(lerp(x0, x1, e), lerp(y0, y1, e), z0 * Math.pow(z1 / z0, e));
+    }
+  }
+  const k = keys[keys.length - 1];
+  setCam(k[1], k[2], k[3]);
+}
+// rush the camera into (or back out of) a point, keeping it centred as zoom explodes
+function zoomFrom(x0, y0, z0, ex, ey, p, zmax) {
+  const z = z0 * Math.exp(Math.log(zmax / z0) * Math.pow(p, 2.4));
+  const g = E.inOut(Math.min(1, p * 1.2));
+  setCam(ex - (ex - x0) * z0 * (1 - g) / z, ey - (ey - y0) * z0 * (1 - g) / z, z);
+}
+const zoomInto = (ex, ey, p, zmax) => zoomFrom(160, 90, 1, ex, ey, p, zmax);
+// draw a background layer with parallax factor f (0 = pinned to screen, 1 = world)
+function layer(f, fn) {
+  const px = cam.x, py = cam.y, pz = cam.z;
+  cam.x = 160 + (px - 160) * f; cam.y = 90 + (py - 90) * f; cam.z = 1 + (pz - 1) * f;
+  fn();
+  cam.x = px; cam.y = py; cam.z = pz;
+}
+function screenSpace(fn) { const px = cam.x, py = cam.y, pz = cam.z; setCam(160, 90, 1); fn(); setCam(px, py, pz); }
+
+// ─── Drawing primitives ─────────────────────────────────────────────────────
+// Every rect snaps both edges to device pixels, so pixel art stays seamless at any zoom.
+function R(x, y, w, h, c) {
+  const x0 = Math.round(TX(x)), x1 = Math.round(TX(x + w));
+  if (x1 <= 0 || x0 >= CW) return;
+  const y0 = Math.round(TY(y)), y1 = Math.round(TY(y + h));
+  if (y1 <= 0 || y0 >= CH) return;
+  ctx.fillStyle = c;
+  ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+}
+function alpha(a, fn) {
+  if (a <= 0.002) return;
+  const p = ctx.globalAlpha;
+  ctx.globalAlpha = p * Math.min(1, a);
+  fn();
+  ctx.globalAlpha = p;
+}
+function additive(fn) {
+  const p = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = 'lighter';
+  fn();
+  ctx.globalCompositeOperation = p;
+}
+const _rgb = {};
+function rgba(hex, a) {
+  let v = _rgb[hex];
+  if (!v) { const n = parseInt(hex.slice(1), 16); v = _rgb[hex] = `${n >> 16},${(n >> 8) & 255},${n & 255}`; }
+  return `rgba(${v},${a})`;
+}
+function mix(h1, h2, t) {
+  const a = parseInt(h1.slice(1), 16), b = parseInt(h2.slice(1), 16);
+  const r = Math.round(lerp(a >> 16, b >> 16, t));
+  const g = Math.round(lerp((a >> 8) & 255, (b >> 8) & 255, t));
+  const bl = Math.round(lerp(a & 255, b & 255, t));
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | bl).toString(16).slice(1);
+}
+function glow(x, y, r, color, a = 0.5) {
+  const X = TX(x), Y = TY(y), rr = TL(r);
+  if (rr < 1 || X + rr < 0 || X - rr > CW || Y + rr < 0 || Y - rr > CH) return;
+  const g = ctx.createRadialGradient(X, Y, 0, X, Y, rr);
+  g.addColorStop(0, rgba(color, a));
+  g.addColorStop(0.35, rgba(color, a * 0.4));
+  g.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(X - rr, Y - rr, rr * 2, rr * 2);
+}
+function circle(x, y, r, c) {
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(TX(x), TY(y), Math.max(0.5, TL(r)), 0, Math.PI * 2); ctx.fill();
+}
+function line(x1, y1, x2, y2, c, w = 1) {
+  ctx.strokeStyle = c; ctx.lineWidth = Math.max(1, TL(w)); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(TX(x1), TY(y1)); ctx.lineTo(TX(x2), TY(y2)); ctx.stroke();
+}
+function rrPath(X, Y, W, H, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(X, Y, W, H, r);
+  else ctx.rect(X, Y, W, H);
+}
+function rrect(x, y, w, h, r, fill, stroke, sw = 0.6) {
+  const X = TX(x), Y = TY(y);
+  rrPath(X, Y, TL(w), TL(h), TL(r));
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, TL(sw)); ctx.stroke(); }
+}
+// text in world units; skipped when too small, too huge, or off screen
+function T(str, x, y, size, color, o = {}) {
+  const px = TL(size);
+  if (px < 2 || px > 2600) return;
+  const X = TX(x), Y = TY(y);
+  if (Y < -px || Y > CH + px * 2 || X > CW + px * 4 || X < -px * (str.length + 4) * 1.2) return;
+  ctx.font = F(px, o.f || 'mono', o.w || 400);
+  ctx.textAlign = o.a || 'left';
+  ctx.textBaseline = o.b || 'alphabetic';
+  ctx.fillStyle = color;
+  ctx.fillText(str, X, Y);
+}
+// consecutive styled runs, each placed after the measured width of the last,
+// so hinting at small sizes never opens gaps between bold and regular text
+function runs(list, x, y, size, o = {}) {
+  const px = TL(size);
+  if (px < 2 || px > 2600) return;
+  let X = TX(x);
+  const Y = TY(y);
+  if (Y < -px || Y > CH + px * 2) return;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  for (const [str, color, w] of list) {
+    ctx.font = F(px, o.f || 'mono', w || 400);
+    ctx.fillStyle = color;
+    ctx.fillText(str, X, Y);
+    X += ctx.measureText(str).width;
+  }
+}
+// monospace advance: ASCII 0.6em, CJK / full-width 1em (matches the mono stack)
+const isWide = ch => ch.charCodeAt(0) >= 0x2e80;
+const MW = (str, size) => { let w = 0; for (const ch of str) w += isWide(ch) ? size : size * 0.6; return w; };
+
+function spr(rows, x, y, s, pal) {
+  for (let j = 0; j < rows.length; j++) {
+    const row = rows[j];
+    for (let i = 0; i < row.length;) {
+      const ch = row[i];
+      if (ch === '.') { i++; continue; }
+      let k = i + 1;
+      while (k < row.length && row[k] === ch) k++;
+      R(x + i * s, y + j * s, (k - i) * s, s, pal[ch] || pal['#']);
+      i = k;
+    }
+  }
+}
+
+// ─── Clawd ──────────────────────────────────────────────────────────────────
+// Exactly the CLI's three lines of quadrant blocks:
+//     ▐▛███▜▌        ..############..
+//    ▝▜█████▛▘   →   ..##E######E##..   one quadrant = 1 px wide, 2 px tall,
+//      ▘▘ ▝▝         AA############AA   so a 16 × 10 sprite with slit eyes,
+//                    ...L.L....L.L...   side arms and four stubby legs.
+// (cx, gy) is the centre of its feet on the ground; s = world units per sprite pixel.
+function clawd(cx, gy, s, o = {}) {
+  let bob = o.bob || 0, liftA = 0, liftB = 0;
+  if (o.walk != null) {
+    const f = Math.floor((((o.walk % 1) + 1) % 1) * 4);
+    if (f === 1) { liftA = 1; bob = 1; } else if (f === 3) { liftB = 1; bob = 1; }
+  }
+  const air = o.jump || 0;
+  const x0 = cx - 8 * s, y0 = gy - 10 * s - bob * s - air;
+  const B = o.color || C.body;
+  R(x0 + 2 * s, y0, 12 * s, 8 * s, B);
+  const aL = o.armL != null ? o.armL : (o.arms || 0);
+  const aR = o.armR != null ? o.armR : (o.arms || 0);
+  R(x0, y0 + (4 - 2 * aL) * s, 2 * s, 2 * s, B);
+  R(x0 + 14 * s, y0 + (4 - 2 * aR) * s, 2 * s, 2 * s, B);
+  const planted = (2 + bob) * s, lifted = (1 + bob) * s, dangle = 2 * s;
+  const leg = lift => air > 0 ? dangle : (lift ? lifted : planted);
+  R(x0 + 3 * s, y0 + 8 * s, s, leg(liftA), B);
+  R(x0 + 5 * s, y0 + 8 * s, s, leg(liftB), B);
+  R(x0 + 10 * s, y0 + 8 * s, s, leg(liftA), B);
+  R(x0 + 12 * s, y0 + 8 * s, s, leg(liftB), B);
+  eyes(x0, y0, s, o);
+  return { x0, y0, top: y0, mid: y0 + 5 * s };
+}
+function eyes(x0, y0, s, o) {
+  const k = o.eye || C.ink;
+  const lx = Math.round(o.look || 0), row = 2 - (o.up ? 1 : 0);
+  const px = (c, r, w = 1, h = 1) => R(x0 + c * s, y0 + r * s, w * s, h * s, k);
+  const one = (c, side, shape) => {
+    switch (shape) {
+      case 'closed': px(side < 0 ? c - 1 : c, row + 1, 2, 1); break;
+      case 'happy': px(c - 1, row + 1); px(c, row); px(c + 1, row + 1); break;
+      case 'wow': px(c, row - 1, 1, 3); break;
+      default: px(c, row, 1, 2);
+    }
+  };
+  const mood = o.mood || 'open';
+  one(4 + lx, -1, mood === 'wink' ? 'open' : mood);
+  one(11 + lx, 1, mood === 'wink' ? 'closed' : mood);
+}
+// a warm pool of light so the little orange block always reads against the dark
+function aura(cx, gy, s, a = 1) {
+  additive(() => glow(cx, gy - 5 * s, 22 * s, C.body, 0.16 * a));
+}
+
+// ─── Small sprites ──────────────────────────────────────────────────────────
+// The thinking spinner cycles · ✢ ✳ ✶ ✻ ✽ forward and back, 120 ms a frame, like the CLI.
+const SPIN = [
+  ['.......', '.......', '.......', '...#...', '.......', '.......', '.......'],
+  ['.......', '...#...', '...#...', '.##.##.', '...#...', '...#...', '.......'],
+  ['.......', '.#.#.#.', '..###..', '.##.##.', '..###..', '.#.#.#.', '.......'],
+  ['...#...', '...#...', '##.#.##', '..###..', '.#.#.#.', '#.....#', '.......'],
+  ['#..#..#', '.#.#.#.', '..#.#..', '###.###', '..#.#..', '.#.#.#.', '#..#..#'],
+  ['.#.#.#.', '###.###', '.#####.', '##.#.##', '.#####.', '###.###', '.#.#.#.'],
+];
+const SPIN_SEQ = [0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0];
+const spinFrame = t => SPIN_SEQ[Math.floor(Math.max(0, t) / 0.12) % SPIN_SEQ.length];
+function spinner(t, cx, cy, s, color = C.body) {
+  spr(SPIN[spinFrame(t)], cx - 3.5 * s, cy - 3.5 * s, s, { '#': color });
+}
+const BUG = [
+  ['.a..a....', '..a.a....', '..hhrrrr.', '.whhrsrrr', '..hhrrrsr', '..l.l.l..'],
+  ['.a..a....', '..a.a....', '..hhrrrr.', '.whhrsrrr', '..hhrrrsr', '.l.l.l...'],
+];
+const BUG_PAL = { a: '#8c3a48', h: '#3b171e', r: C.error, s: '#b3596b', w: '#ffffff', l: '#3b171e' };
+const FLY = [
+  ['bb...bb', 'bwb.bwb', '.bbkbb.', '.b.k.b.', '...k...'],
+  ['..b.b..', '..bwb..', '...k...', '..bkb..', '...k...'],
+];
+const FLY_PAL = { b: C.permission, w: '#ffffff', k: '#2b2840' };
+const POINTER = [
+  'k.........', 'kk........', 'kwk.......', 'kwwk......', 'kwwwk.....', 'kwwwwk....', 'kwwwwwk...',
+  'kwwwwwwk..', 'kwwwwwwwk.', 'kwwwwwkkkk', 'kwwkwwk...', 'kwk.kwwk..', 'kk..kwwk..', 'k....kwwk.', '.....kkk..',
+];
+const POINTER_PAL = { k: '#161616', w: '#ffffff' };
+const LANTERN = ['.ppppp.', 'ppppppp', 'pphhhpp', 'ppphppp', 'ppppppp', 'ppppppp', '.ppppp.', '..q.q..', '...f...'];
+const LANTERN_LIT = { p: '#ffb347', h: '#ffe3a8', q: '#8a6440', f: '#fff4cf' };
+const LANTERN_DARK = { p: '#8d7a62', h: '#a89479', q: '#5c4a38', f: '#5c4a38' };
+const CHEVRON = ['#......', '##.....', '.##....', '..##...', '...##..', '....##.', '...##..', '..##...', '.##....', '##.....', '#......'];
+const CHECK = ['....#', '...#.', '#.#..', '.#...'];
+const BANG = ['#', '#', '#', '.', '#'];
+const CUBE = ['.hhhh.', 'hwwwwh', 'hwppwh', 'hwppwh', 'hwwwwh', '.hhhh.'];
+const CUBE_PAL = { h: C.body, w: '#fff4e8', p: C.shimmer };
+
+function pointer(x, y, s, pressed) {
+  additive(() => glow(x + 3 * s, y + 5 * s, 9 * s, '#ffffff', 0.12));
+  spr(POINTER, x, y + (pressed ? 0.5 * s : 0), s, POINTER_PAL);
+}
+function lantern(x, y, s, lit, t, seed = 0) {
+  if (lit > 0) {
+    const fl = 0.85 + 0.15 * Math.sin(t * 9 + seed * 3) * Math.sin(t * 5.3 + seed);
+    additive(() => { glow(x + 3.5 * s, y + 4 * s, 16 * s * fl, '#ffb347', 0.32 * lit); glow(x + 3.5 * s, y + 4 * s, 5 * s, '#fff0c8', 0.35 * lit); });
+  }
+  spr(LANTERN, x, y, s, lit > 0.5 ? LANTERN_LIT : LANTERN_DARK);
+}
+
+// ─── Sky: stars, and a faint milky way made of code ────────────────────────
+const STARS = (() => {
+  const r = rng(11);
+  const cols = ['#8a8279', '#8a8279', '#8a8279', '#6f6861', '#6f6861', C.body, C.permission, C.plan, C.paper];
+  return Array.from({ length: 190 }, () => ({
+    x: r() * 1150 - 320, y: r() * 380 - 250, c: cols[Math.floor(r() * cols.length)],
+    ph: r() * 6.283, sp: 0.5 + r() * 2.2, big: r() < 0.08,
+  }));
+})();
+const MILKY = (() => {
+  const r = rng(5);
+  const words = ['const', 'await', '=>', '{ }', 'return', 'import', 'git push', 'npm test', '( )', '[ ]', 'useState',
+    ';', 'export', '//', 'if', '&&', '===', '</>', 'fix:', 'feat:', '#', '$', '~/', 'README.md', 'function', 'null', 'true', '...'];
+  return Array.from({ length: 110 }, () => ({ s: words[Math.floor(r() * words.length)], u: r(), v: r() - 0.5, sz: 3 + r() * 2.4, a: 0.05 + r() * 0.09, ph: r() * 6 }));
+})();
+function sky(t, o = {}) {
+  const g = ctx.createLinearGradient(0, 0, 0, CH);
+  g.addColorStop(0, o.top || C.sky0);
+  g.addColorStop(0.72, o.mid || C.sky1);
+  g.addColorStop(1, o.bot || C.sky2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CW, CH);
+  layer(0.22, () => {
+    for (const m of MILKY) {
+      const x = -170 + m.u * 660, y = 60 - m.u * 230 + m.v * 64 + Math.sin(t * 0.15 + m.ph) * 1.2;
+      alpha(m.a * (o.milky ?? 1), () => T(m.s, x, y, m.sz, '#cbbfb0'));
+    }
+  });
+  layer(0.5, () => {
+    for (const s of STARS) {
+      const tw = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+      alpha(tw * (o.stars ?? 1), () => {
+        if (s.big) { R(s.x - 1, s.y, 3, 1, s.c); R(s.x, s.y - 1, 1, 3, s.c); } else R(s.x, s.y, 1, 1, s.c);
+      });
+    }
+  });
+}
+
+// ─── Home: the prompt input, seen from inside ──────────────────────────────
+// The rule above "> " is the horizon it lives on; the prompt chevron is a
+// monument and the blinking block cursor is its lighthouse.
+const HOME = { gy: 138, mx: 150 };
+function homeGround(t) {
+  const gy = HOME.gy;
+  R(-500, gy + 1, 1400, 90, '#090807');
+  R(-500, gy, 1400, 1, C.rule);
+  R(-500, gy + 26, 1400, 0.7, '#3a3632');
+  for (let x = -480; x < 900; x += 9) R(x + ((x * 7) % 5), gy + 3 + ((x * 13) % 4), 1, 1, '#1d1a17');
+  T('? for shortcuts', 30, gy + 36, 4.2, '#5f5850');
+  additive(() => glow(62, gy - 9, 22, '#888888', 0.07));
+  spr(CHEVRON, 56, gy - 17.6, 1.6, { '#': '#9a948d' });
+  const on = (t % 1.06) < 0.53;
+  if (on) additive(() => { glow(80, gy - 7, 34, '#f1e7d6', 0.13); glow(80, gy - 7, 9, '#ffffff', 0.25); });
+  R(77, gy - 13, 6, 13, on ? '#f1e7d6' : '#2a2623');
+}
+
+// ─── Terminal-style HUD: what Claude Code is really doing ──────────────────
+// Items: {t, until?, k: 'user'|'tool'|'out'|'spin'|'say'|'warn', …}
+function hudText(it, t) {
+  switch (it.k) {
+    case 'user': return '> ' + it.s;
+    case 'tool': return it.name + it.args;
+    case 'spin': return (typeof it.verb === 'function' ? it.verb(t) : it.verb) + '…' + (it.esc === false ? '' : ' (esc to interrupt)');
+    case 'say': case 'cont': { const s = [...it.s]; const n = it.cps ? Math.floor((t - it.t) * it.cps) : s.length; return s.slice(0, Math.max(0, n)).join(''); }
+    case 'warn': return typeof it.s === 'function' ? it.s(t) : it.s;
+    default: return it.s;
+  }
+}
+function hud(t, items) {
+  const vis = items.filter(it => t >= it.t && (it.until == null || t < it.until));
+  if (!vis.length) return;
+  const size = 4.2 * US, lh = 6.5 * US, padX = 3.4 * US, padY = 2.6 * US;
+  const x = 6 * US, y = 6 * US, ind = size * 1.5;
+  ctx.font = F(size, 'mono');
+  const texts = vis.map(it => hudText(it, t));
+  let w = 0;
+  vis.forEach((it, i) => {
+    const full = it.k === 'say' || it.k === 'cont' ? it.s : texts[i];
+    w = Math.max(w, ctx.measureText(full).width + (it.k === 'out' ? ind * 2.2 : ind));
+  });
+  w = Math.min(w, CW - x * 2 - padX * 2);
+  const h = vis.length * lh + padY * 2 - lh + size * 1.35;
+  const first = Math.min(1, (t - vis[0].t) / 0.3);
+  ctx.globalAlpha = 0.87 * first;
+  ctx.fillStyle = '#0a0908';
+  rrPath(x, y, w + padX * 2, h, 1.8 * US); ctx.fill();
+  ctx.globalAlpha = first * 0.9;
+  ctx.strokeStyle = '#2b2723'; ctx.lineWidth = Math.max(1, 0.4 * US); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  vis.forEach((it, i) => {
+    const a = Math.min(1, (t - it.t) / 0.22);
+    const bx = x + padX, by = y + padY + i * lh + size;
+    ctx.globalAlpha = a;
+    const txt = texts[i];
+    const cx = bx + size * 0.34, cy = by - size * 0.34;
+    if (it.k === 'user') {
+      ctx.fillStyle = C.userBg;
+      ctx.fillRect(bx - size * 0.3, by - size * 1.02, ctx.measureText(txt).width + size * 0.6, size * 1.36);
+      ctx.fillStyle = '#9a9a9a'; ctx.fillText('>', bx, by);
+      ctx.fillStyle = C.white; ctx.fillText(it.s, bx + ctx.measureText('> ').width, by);
+    } else if (it.k === 'tool' || it.k === 'say') {
+      let dot = C.white;
+      if (it.k === 'tool') dot = t >= it.done ? C.success : ((t - it.t) % 0.9 < 0.45 ? '#dcdcdc' : '#5c5c5c');
+      ctx.fillStyle = dot; ctx.beginPath(); ctx.arc(cx, cy, size * 0.27, 0, Math.PI * 2); ctx.fill();
+      if (it.k === 'tool') {
+        ctx.font = F(size, 'mono', 700); ctx.fillStyle = C.white; ctx.fillText(it.name, bx + ind, by);
+        const nw = ctx.measureText(it.name).width;
+        ctx.font = F(size, 'mono'); ctx.fillStyle = '#d6d2cc'; ctx.fillText(it.args, bx + ind + nw, by);
+      } else { ctx.fillStyle = C.white; ctx.fillText(txt, bx + ind, by); }
+    } else if (it.k === 'out') {
+      ctx.strokeStyle = '#7a7a7a'; ctx.lineWidth = Math.max(1, 0.35 * US);
+      ctx.beginPath(); ctx.moveTo(bx + ind, by - size * 0.95); ctx.lineTo(bx + ind, by - size * 0.32); ctx.lineTo(bx + ind + size * 0.62, by - size * 0.32); ctx.stroke();
+      ctx.fillStyle = C.inactive; ctx.fillText(txt, bx + ind * 2.2, by);
+    } else if (it.k === 'spin') {
+      const f = SPIN[spinFrame(t)], ps = size / 7.2;
+      ctx.fillStyle = C.body;
+      for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) if (f[r][c] === '#') ctx.fillRect(Math.round(cx - 3.5 * ps + c * ps), Math.round(cy - 3.5 * ps + r * ps), Math.ceil(ps), Math.ceil(ps));
+      const verb = (typeof it.verb === 'function' ? it.verb(t) : it.verb) + '…';
+      shimmerScreen(verb, bx + ind, by, size, t);
+      if (it.esc !== false) { ctx.fillStyle = C.inactive; ctx.fillText(' (esc to interrupt)', bx + ind + ctx.measureText(verb).width, by); }
+    } else if (it.k === 'cont') {
+      ctx.fillStyle = C.white; ctx.fillText(txt, bx + ind, by);
+    } else if (it.k === 'warn') {
+      ctx.fillStyle = C.warning; ctx.fillText(txt, bx, by);
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+// the spinner verb shimmers: a lighter band sweeps across the letters
+function shimmerScreen(str, X, Y, size, t) {
+  ctx.font = F(size, 'mono');
+  const w = ctx.measureText(str).width;
+  ctx.fillStyle = C.body; ctx.fillText(str, X, Y);
+  const band = size * 2.4, pos = ((t * 0.9) % 1.4) / 1.4 * (w + band * 2) - band;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(X + pos, Y - size * 1.2, band, size * 1.6); ctx.clip();
+  ctx.fillStyle = C.shimmer; ctx.fillText(str, X, Y);
+  ctx.restore();
+}
+function shimmerWorld(str, x, y, size, t, align = 'center') {
+  const w = MW(str, size);
+  const X = align === 'center' ? x - w / 2 : x;
+  const px = TL(size);
+  if (px < 2) return;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  shimmerScreen(str, TX(X), TY(y), px, t);
+}
+
+// ─── Captions, chapter cards, title card ───────────────────────────────────
+function wrapCJK(text, maxW) {
+  const out = [];
+  for (const para of text.split('\n')) {
+    let cur = '';
+    for (const ch of para) {
+      if (ctx.measureText(cur + ch).width > maxW && cur) {
+        let cut = -1;
+        for (let k = cur.length - 1; k > cur.length - 10 && k > 0; k--) if ('，。：；、——！？ '.includes(cur[k])) { cut = k + 1; break; }
+        if (cut > 0) { out.push(cur.slice(0, cut)); cur = cur.slice(cut); } else { out.push(cur); cur = ''; }
+      }
+      cur += ch;
+    }
+    out.push(cur);
+  }
+  return out.map(s => s.trim()).filter(Boolean);
+}
+function caption(text, a) {
+  if (a <= 0.002 || !text) return;
+  const size = 7 * US, lh = size * 1.5;
+  ctx.font = F(size, 'serif', 600);
+  const lines = wrapCJK(text, CW * 0.84);
+  const bandH = lines.length * lh + 26 * US;
+  const g = ctx.createLinearGradient(0, CH - bandH, 0, CH);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, `rgba(0,0,0,${0.68 * a})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, CH - bandH, CW, bandH);
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 3 * US; ctx.shadowOffsetY = 0.4 * US;
+  ctx.fillStyle = C.caption;
+  const y0 = CH - 10 * US - (lines.length - 1) * lh;
+  lines.forEach((ln, i) => ctx.fillText(ln, CW / 2, y0 + i * lh + (1 - a) * 2 * US));
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.globalAlpha = 1;
+}
+function chapterCard(t, num, title) {
+  const a = seg(t, 0.3, 0.9) * (1 - seg(t, 3.1, 3.8));
+  if (a <= 0) return;
+  const xr = CW - 8 * US, y1 = 12 * US;
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 3 * US;
+  ctx.font = F(3.8 * US, 'sans', 500); ctx.fillStyle = C.body;
+  ctx.fillText(num, xr, y1);
+  ctx.font = F(6.6 * US, 'serif', 600); ctx.fillStyle = C.caption;
+  ctx.fillText(title, xr, y1 + 8.6 * US);
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+function titleCard(a, t, mood = 'open') {
+  if (a <= 0.002) return;
+  ctx.globalAlpha = a * 0.74; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+  ctx.globalAlpha = a;
+  screenSpace(() => {
+    aura(160, 70, 2.2, 1.2);
+    clawd(160, 70, 2.2, { mood: blinking(t, 2.8, 0.9) ? 'closed' : mood, bob: Math.floor(t / 0.7) % 2 });
+    T('小橘块眼中的世界', 160, 99, 15, C.caption, { a: 'center', f: 'serif', w: 900 });
+    T('一部关于 Claude Code 吉祥物的像素短片', 160, 112, 4.8, C.dim, { a: 'center', f: 'sans' });
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ─── Transitions & finish ──────────────────────────────────────────────────
+function iris(x, y, r) {
+  const X = TX(x), Y = TY(y), rr = Math.max(0, TL(r));
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.rect(0, 0, CW, CH);
+  ctx.arc(X, Y, rr, 0, Math.PI * 2, true);
+  ctx.fill('evenodd');
+}
+function fade(a) { if (a <= 0.002) return; ctx.globalAlpha = Math.min(1, a); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1; }
+let _vig = null, _vigKey = '';
+function vignette(a = 0.55) {
+  const key = CW + 'x' + CH;
+  if (key !== _vigKey) {
+    _vigKey = key;
+    _vig = ctx.createRadialGradient(CW / 2, CH / 2, CH * 0.38, CW / 2, CH / 2, CW * 0.64);
+    _vig.addColorStop(0, 'rgba(0,0,0,0)');
+    _vig.addColorStop(1, 'rgba(0,0,0,1)');
+  }
+  ctx.globalAlpha = a; ctx.fillStyle = _vig; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1;
+}
+
+// ─── The terminal, as you see it ───────────────────────────────────────────
+const TM = { x: 16, y: 9, w: 288, h: 162, bar: 9, fs: 4.3, lh: 6.3, left: 25, top: 22 };
+const TCW = TM.fs * 0.6;
+// quadrant bits: 8 top-left · 4 top-right · 2 bottom-left · 1 bottom-right
+const QUAD = { ' ': 0, '█': 15, '▐': 5, '▌': 10, '▛': 14, '▜': 13, '▝': 4, '▘': 8, '▗': 1, '▖': 2, '▀': 12, '▄': 3, '▙': 11, '▟': 7 };
+// the CLI's own markup: the middle runs sit on a clawd_background (black) cell
+const CLAWD_ART = [
+  [[' ▐', false], ['▛███▜', true], ['▌', false]],
+  [['▝▜', false], ['█████', true], ['▛▘', false]],
+  [['  ', false], ['▘▘ ▝▝', false], ['  ', false]],
+];
+function termClawd(x, y, o = {}) {
+  const qw = TCW / 2, qh = TM.lh / 2;
+  CLAWD_ART.forEach((segs, row) => {
+    let col = 0;
+    for (const [str, bg] of segs) {
+      for (const ch of str) {
+        const cx = x + col * TCW, cy = y + row * TM.lh;
+        if (bg) R(cx, cy, TCW, TM.lh, C.ink);
+        let m = QUAD[ch] || 0;
+        if (row === 0 && col === 2 && o.closedL) m = 15;   // a blink fills the eye hole
+        if (row === 0 && col === 6 && o.closedR) m = 15;
+        if (m & 8) R(cx, cy, qw, qh, C.body);
+        if (m & 4) R(cx + qw, cy, qw, qh, C.body);
+        if (m & 2) R(cx, cy + qh, qw, qh, C.body);
+        if (m & 1) R(cx + qw, cy + qh, qw, qh, C.body);
+        col++;
+      }
+    }
+  });
+}
+const tTop = i => TM.top + i * TM.lh;
+const tBase = i => tTop(i) + TM.lh * 0.74;
+// the left eye of the banner clawd: bottom-right quadrant of '▛'
+const TERM_EYE = { x: TM.left + 2.75 * TCW, y: tTop(2) + 0.75 * TM.lh };
+
+function termLine(ln, row, t) {
+  const X0 = TM.left, b = tBase(row), fs = TM.fs;
+  const cy = tTop(row) + TM.lh * 0.52;
+  switch (ln.k) {
+    case 'user':
+      R(X0 - 1, tTop(row) + 0.3, MW('> ' + ln.s, fs) + 2, TM.lh - 0.6, C.userBg);
+      T('>', X0, b, fs, '#9a9a9a');
+      T(ln.s, X0 + 2 * TCW, b, fs, C.white);
+      break;
+    case 'tool':
+      circle(X0 + TCW * 0.5, cy, fs * 0.26, ln.done === false ? '#dcdcdc' : C.success);
+      runs([[ln.name, C.white, 700], [ln.args, '#d6d2cc']], X0 + 2 * TCW, b, fs);
+      break;
+    case 'out':
+      line(X0 + 2.5 * TCW, tTop(row) + 0.8, X0 + 2.5 * TCW, cy + 0.2, '#7a7a7a', 0.3);
+      line(X0 + 2.5 * TCW, cy + 0.2, X0 + 3.6 * TCW, cy + 0.2, '#7a7a7a', 0.3);
+      T(ln.s, X0 + 5 * TCW, b, fs, C.inactive);
+      break;
+    case 'spin':
+      spinner(t, X0 + TCW * 0.5, cy, fs / 7.4, C.body);
+      shimmerWorld(ln.verb + '…', X0 + 2 * TCW, b, fs, t, 'left');
+      ctx.font = F(TL(fs), 'mono');
+      runs([[' (esc to interrupt)', C.inactive]], X0 + 2 * TCW + ctx.measureText(ln.verb + '…').width / TL(1), b, fs);
+      break;
+    case 'say':
+      circle(X0 + TCW * 0.5, cy, fs * 0.26, C.white);
+      T(ln.s, X0 + 2 * TCW, b, fs, C.white);
+      break;
+    case 'cont':
+      T(ln.s, X0 + 2 * TCW, b, fs, C.white);
+      break;
+  }
+}
+function drawTerminal(st, t) {
+  ctx.fillStyle = '#0b0a09';
+  ctx.fillRect(0, 0, CW, CH);
+  additive(() => glow(160, 96, 190, C.body, 0.04));
+  rrect(TM.x + 1.2, TM.y + 2.4, TM.w, TM.h, 3, 'rgba(0,0,0,0.6)');
+  rrect(TM.x, TM.y, TM.w, TM.h, 3, '#050505');
+  ctx.fillStyle = '#1c1a18';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(TX(TM.x), TY(TM.y), TL(TM.w), TL(TM.bar), [TL(3), TL(3), 0, 0]);
+  else ctx.rect(TX(TM.x), TY(TM.y), TL(TM.w), TL(TM.bar));
+  ctx.fill();
+  R(TM.x, TM.y + TM.bar, TM.w, 0.3, '#2c2926');
+  rrect(TM.x, TM.y, TM.w, TM.h, 3, null, '#2e2a27', 0.35);
+  ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => circle(TM.x + 6 + i * 4.8, TM.y + TM.bar / 2, 1.35, c));
+  T(st.title, 160, TM.y + TM.bar / 2 + 1.3, 3.5, '#8d857c', { a: 'center', f: 'sans' });
+
+  const X0 = TM.left;
+  if (st.shell != null) {
+    T('~/yourworld', X0, tBase(0), TM.fs, '#6fb3a8');
+    T('$', X0 + 12 * TCW, tBase(0), TM.fs, '#8a8279');
+    T(st.shell, X0 + 14 * TCW, tBase(0), TM.fs, C.white);
+    if (st.shellCursor && (t % 1.06) < 0.53) R(X0 + (14 + st.shell.length) * TCW, tTop(0) + 0.5, TCW, TM.lh - 1, '#d8d2ca');
+  }
+  if (st.banner) {
+    termClawd(X0, tTop(2), st.clawd || {});
+    T('Claude Code', X0 + 11 * TCW, tBase(2), TM.fs, C.white, { w: 700 });
+    T('Welcome back!', X0 + 11 * TCW, tBase(3), TM.fs, C.inactive);
+    T('~/yourworld', X0 + 11 * TCW, tBase(4), TM.fs, C.inactive);
+  }
+  let row = 6;
+  for (const ln of st.lines) { if (ln.k !== 'blank') termLine(ln, row, t); row++; }
+  if (st.input != null) {
+    if (st.lines.length) row++;
+    const xr = TM.x + TM.w - 8;
+    R(X0 - 1, tTop(row) + TM.lh / 2, xr - X0, 0.3, '#6a6660');
+    T('>', X0, tBase(row + 1), TM.fs, C.white);
+    T(st.input, X0 + 2 * TCW, tBase(row + 1), TM.fs, C.white);
+    const typing = st.typing;
+    if (typing || (t % 1.06) < 0.53) R(X0 + 2 * TCW + MW(st.input, TM.fs), tTop(row + 1) + 0.5, TCW, TM.lh - 1, '#e8e2da');
+    R(X0 - 1, tTop(row + 2) + TM.lh / 2, xr - X0, 0.3, '#6a6660');
+    T('? for shortcuts', X0 + 2 * TCW, tBase(row + 3), TM.fs, '#6b6660');
+  }
+}
+
+// ─── Prologue: what you see ────────────────────────────────────────────────
+const MSG = '登录按钮点了没反应，帮我看看？';
+function drawPrologue(t) {
+  zoomInto(TERM_EYE.x, TERM_EYE.y, seg(t, 6.9, 10.5), 380);
+  const blink = t > 7.2 && t < 7.36;
+  const st = {
+    title: t < 3.6 ? 'yourworld — zsh' : t < 6.4 ? '✳ Claude Code' : '✳ Fix login button',
+    shell: 'claude'.slice(0, Math.round(seg(t, 2.6, 3.3) * 6)),
+    shellCursor: t < 3.6,
+    banner: t >= 3.7,
+    clawd: { closedL: blink, closedR: blink },
+    lines: [],
+    input: null,
+    typing: t > 4.0 && t < 5.7,
+  };
+  if (t >= 3.7) st.input = t < 5.95 ? MSG.slice(0, Math.floor(seg(t, 4.0, 5.6) * MSG.length + 1e-6)) : '';
+  if (t >= 5.95) st.lines.push({ k: 'user', s: MSG }, { k: 'blank' }, { k: 'spin', verb: 'Clauding' });
+  drawTerminal(st, t);
+  setCam(160, 90, 1);
+  if (t < 2.9) titleCard(1 - seg(t, 2.0, 2.8), t);
+}
+
+// ─── Act 1: a letter falls from the sky ────────────────────────────────────
+const SKY_VERBS = ['Pondering', 'Noodling', 'Percolating', 'Clauding'];
+function letterBox(x, y, text, a = 1) {
+  const fs = 4.6, w = MW('> ' + text, fs) + 8, h = 9.5;
+  alpha(a, () => {
+    additive(() => glow(x, y, w * 0.7, '#fff3dc', 0.17));
+    rrect(x - w / 2, y - h / 2, w, h, 1.6, C.userBg, '#5f5a55', 0.35);
+    T('>', x - w / 2 + 4, y + 1.6, fs, '#9a9a9a');
+    T(text, x - w / 2 + 4 + 2 * fs * 0.6, y + 1.6, fs, C.white);
+  });
+  return w;
+}
+function letterPath(p, x0, y0, x1, y1, sway = 9) {
+  return [lerp(x0, x1, E.inOut(p)) + Math.sin(p * 8.5) * sway * (1 - p), lerp(y0, y1, E.out(p))];
+}
+function drawSkyAct(t) {
+  const gy = HOME.gy, s = 1.5;
+  const walkT = Math.max(0, t - 10.6);
+  const mx = HOME.mx + walkT * 26;
+  const push = E.inOut(seg(t, 4.8, 6.4)) * (1 - E.inOut(seg(t, 8.8, 10.6)));
+  setCam(lerp(160, 152, push) + walkT * 12, lerp(90, 104, push), lerp(1, 1.5, push));
+  sky(t);
+  homeGround(t);
+  aura(mx, gy, s);
+
+  // the letter drifts down like a leaf and lands in its raised arms
+  const L0 = 1.8, L1 = 4.6;
+  if (t >= L0 && t < 8.0) {
+    let [lx, ly] = letterPath(seg(t, L0, L1), 238, -26, HOME.mx, 108);
+    if (t > L1) { lx = HOME.mx; ly = 108 + Math.sin((t - L1) * 2.2) * 1.2 - E.inOut(seg(t, 4.6, 5.4)) * 4; }
+    if (t < L1 + 0.3) {
+      for (let k = 1; k <= 10; k++) {
+        const pk = seg(t - k * 0.07, L0, L1);
+        if (pk <= 0) continue;
+        const [tx, ty] = letterPath(pk, 238, -26, HOME.mx, 108);
+        alpha((1 - k / 11) * 0.8 * (1 - seg(t, L1 - 0.1, L1 + 0.3)), () => R(tx + ((k * 37) % 9) - 4, ty - 5 + ((k * 13) % 5), 1, 1, C.paper));
+      }
+    }
+    letterBox(lx, ly, MSG, 1 - seg(t, 7.35, 7.85));
+    if (t > 7.3) {
+      const r = rng(3);
+      for (let i = 0; i < 28; i++) {
+        const sx = lx + (r() - 0.5) * 70, sy = ly + (r() - 0.5) * 8, d = r() * 0.25;
+        const pp = seg(t, 7.3 + d, 7.85 + d);
+        if (pp <= 0 || pp >= 1) continue;
+        const e = E.in2(pp);
+        R(lerp(sx, mx, e), lerp(sy, gy - 8, e), 1, 1, i % 3 ? C.paper : C.shimmer);
+      }
+    }
+  }
+
+  // clawd: asleep → looks up → catches → reads → thinks
+  let mood = 'open', look = 0, up = false, arms = 0;
+  if (t < 1.45) mood = 'closed';
+  else if (blinking(t, 3.3, 1.2)) mood = 'closed';
+  if (t > 1.9 && t < 4.7) { up = true; look = t < 3.4 ? 1 : 0; }
+  if (t > 4.35 && t < 7.55) arms = 1;
+  if (t > 5.3 && t < 7.3) { look = [-1, 0, 1, -1, 0, 1][Math.floor(seg(t, 5.3, 7.3) * 5.999)]; up = true; mood = 'open'; }
+  if (t > 7.9 && t < 10.6) { up = true; look = Math.sin(t * 1.3) > 0.6 ? 1 : 0; }
+  const walking = t > 10.6;
+  clawd(mx, gy, s, { mood, look: walking ? 1 : look, up, arms, walk: walking ? walkT * 2.4 : null, bob: walking ? 0 : Math.floor(t / 0.8) % 2 });
+
+  // thinking: the spinner turns above its head and verbs bubble up
+  if (t > 7.9) {
+    const a = seg(t, 7.9, 8.3), sx = mx, sy = gy - 10 * s - 8;
+    additive(() => glow(sx, sy, 13, C.body, 0.4 * a));
+    alpha(a, () => spinner(t, sx, sy, 1.05, C.body));
+    SKY_VERBS.forEach((v, i) => {
+      const age = t - (8.1 + i * 0.9);
+      if (age < 0 || age > 2.3) return;
+      const side = i % 2 ? 1 : -1;
+      alpha(Math.min(1, age / 0.3) * (1 - seg(age, 1.5, 2.3)), () => shimmerWorld(v + '…', sx + side * (12 + age * 7), sy - 6 - age * 15, 4.4, t));
+    });
+  }
+  vignette(0.5);
+  hud(t, [
+    { t: 4.7, k: 'user', s: MSG },
+    { t: 7.95, k: 'spin', verb: tt => SKY_VERBS[clamp(Math.floor((tt - 8.1) / 0.9), 0, 3)] },
+  ]);
+  if (t < 1.95) {
+    iris(HOME.mx, gy - 8, 300 * E.inOut(seg(t, 0.45, 1.95)));
+    if (t < 0.9) alpha(win(t, 0.05, 0.9, 0.2, 0.3), () => { additive(() => glow(HOME.mx, gy - 8, 6, C.paper, 0.6)); R(HOME.mx - 0.5, gy - 8.5, 1, 1, C.white); });
+  }
+  chapterCard(t, '第一幕', '天上掉下来的信');
+  fade(seg(t, 11.3, 12.0));
+}
+
+// ─── Act 2: the city of files ──────────────────────────────────────────────
+// Folders are buildings, files are their windows; Search is a flashlight.
+const CITY = (() => {
+  const gy = 150;
+  const bldg = [
+    { x: 126, w: 34, h: 46, name: 'public/', cols: 3, rows: 3, files: { '0,0': 'index.html', '2,1': 'logo.svg' } },
+    { x: 170, w: 44, h: 100, name: 'src/', cols: 4, rows: 8, files: { '1,6': 'main.tsx' } },
+    { x: 220, w: 50, h: 74, name: 'components/', cols: 4, rows: 5, door: true, files: { '0,3': 'LoginButton.tsx', '3,1': 'LoginPage.tsx' } },
+    { x: 276, w: 30, h: 54, name: 'api/', cols: 2, rows: 4, files: { '0,1': 'auth.ts' } },
+    { x: 314, w: 42, h: 60, name: 'tests/', cols: 3, rows: 4, files: { '1,1': 'LoginButton.test.tsx' } },
+  ];
+  const match = new Set(['LoginButton.tsx', 'LoginPage.tsx', 'LoginButton.test.tsx']);
+  const r = rng(21), wins = [];
+  for (const b of bldg) {
+    const top = gy - b.h, x0 = b.x + 5, x1 = b.x + b.w - 9, y0 = top + 10, y1 = gy - (b.door ? 20 : 12);
+    for (let c = 0; c < b.cols; c++) for (let k = 0; k < b.rows; k++) {
+      const file = b.files[c + ',' + k];
+      wins.push({ x: lerp(x0, x1, c / (b.cols - 1)), y: lerp(y0, y1, k / (b.rows - 1)), file, hit: !!file && match.has(file), warm: r() < 0.28, lit: Infinity });
+    }
+  }
+  return { gy, bldg, wins, door: { x: 245, y: gy - 5.5 } };
+})();
+const CITY_S = 1.25;
+function cityX(t) {
+  if (t < 6.6) return lerp(-14, 146, t / 6.6);
+  if (t < 10.6) return 146;
+  return lerp(146, 245, seg(t, 10.6, 13.0));
+}
+const BEAM_O = { x: 146 + 8 * CITY_S + 1, y: CITY.gy - 10 * CITY_S + 3 * CITY_S };
+const angleTo = w => Math.atan2(w.y + 1.75 - BEAM_O.y, w.x + 2 - BEAM_O.x);
+const BEAM_KEYS = [[6.8, -0.05], [8.3, -0.82], [9.3, -0.16], [10.1, angleTo(CITY.wins.find(w => w.file === 'LoginButton.tsx'))]];
+const BEAM_HALF = 0.1;
+function beamAngle(t) {
+  if (t < 6.8 || t > 10.6) return null;
+  for (let i = 1; i < BEAM_KEYS.length; i++) {
+    if (t <= BEAM_KEYS[i][0]) return lerp(BEAM_KEYS[i - 1][1], BEAM_KEYS[i][1], E.inOut(seg(t, BEAM_KEYS[i - 1][0], BEAM_KEYS[i][0])));
+  }
+  return BEAM_KEYS[BEAM_KEYS.length - 1][1];
+}
+for (const w of CITY.wins) {
+  if (!w.hit) continue;
+  for (let t = 6.8; t <= 10.6; t += 0.01) if (Math.abs(beamAngle(t) - angleTo(w)) < BEAM_HALF * 0.8) { w.lit = t; break; }
+}
+function drawCityAct(t) {
+  const gy = CITY.gy, s = CITY_S, mx = cityX(t);
+  let cx = Math.max(160, mx + 26), cy = 90, cz = 1;
+  const b1 = E.inOut(seg(t, 6.4, 7.8));
+  cx = lerp(cx, 208, b1); cy = lerp(cy, 80, b1); cz = lerp(cz, 0.9, b1);
+  const b2 = E.inOut(seg(t, 11.6, 13.8));
+  setCam(lerp(cx, 245, b2), lerp(cy, 134, b2), cz * Math.pow(1.9 / cz, b2));
+
+  sky(t, { milky: 0.7 });
+  // node_modules: a mountain so tall you never see the top
+  layer(0.4, () => {
+    for (let x = 140; x < 600; x += 3) {
+      const h = 50 + 118 * Math.exp(-Math.pow((x - 292) / 64, 2)) + 20 * Math.sin(x * 0.045) + 10 * Math.sin(x * 0.11 + 1.3);
+      R(x, 150 - h, 3, h, '#141118');
+      R(x, 150 - h, 3, 1.2, '#221d2a');
+    }
+    spr(['..#..', '.#.#.', '#####'], 236, 66.5, 1, { '#': '#6b5a2a' });
+    T('node_modules/', 244, 70, 5, '#5c5570');
+    T('1,284 packages', 245, 78, 3.6, '#48415a');
+  });
+  layer(0.7, () => {
+    const r = rng(9);
+    for (let x = -140; x < 660;) {
+      const w = 14 + r() * 22, h = 10 + r() * 34;
+      R(x, 150 - h, w, h, '#100e0c');
+      if (r() < 0.6) R(x + 3 + r() * (w - 6), 150 - h + 4 + r() * (h - 8), 1.5, 1.5, '#3a2c1f');
+      x += w + 2 + r() * 6;
+    }
+  });
+  // road, painted with the path it leads to
+  R(-300, gy, 1000, 40, '#0f0d0b');
+  R(-300, gy, 1000, 0.8, '#2b2621');
+  for (let x = -300; x < 700; x += 16) R(x, gy + 13, 7, 0.8, '#2a2520');
+  T('~/yourworld', 14, gy + 25, 5.4, '#302a25');
+  T('src/components/', 196, gy + 25, 5.4, '#302a25');
+  // README.md signpost and the package.json house
+  R(62, gy - 20, 1.6, 20, '#3a322a');
+  rrect(46, gy - 34, 34, 15, 1, '#221d18', '#3a322a', 0.5);
+  T('# yourworld', 49, gy - 27.5, 3.8, C.paper);
+  R(49, gy - 24.6, 24, 0.8, '#5a524a');
+  R(49, gy - 22.6, 17, 0.8, '#5a524a');
+  T('README.md', 63, gy - 36.5, 3.2, C.dim, { a: 'center' });
+  R(84, gy - 16, 34, 16, '#1b1713');
+  for (let k = 0; k < 6; k++) R(82 + k * 3, gy - 18 - k * 2, 38 - k * 6, 2, '#2e2520');
+  R(97, gy - 9, 7, 9, '#2a221b');
+  T('package.json', 101, gy - 11, 3, '#a39a8f', { a: 'center' });
+
+  // the buildings and their windows
+  const ang = beamAngle(t), on = seg(t, 6.8, 7.0) * (1 - seg(t, 10.4, 10.6));
+  for (const b of CITY.bldg) {
+    const top = gy - b.h, sw = MW(b.name, 3.6) + 4;
+    R(b.x, top, b.w, b.h, '#15120f');
+    R(b.x, top, 1, b.h, '#221d18');
+    R(b.x, top, b.w, 1, '#2b251f');
+    R(b.x + 5, top - 1.5, 0.6, 1.5, '#27364d');
+    R(b.x + sw, top - 1.5, 0.6, 1.5, '#27364d');
+    R(b.x + 3, top - 7.5, sw, 6, '#0f1622');
+    T(b.name, b.x + 5, top - 3, 3.6, '#8fb4e3');
+    if (b.door) {
+      const open = seg(t, 12.2, 12.7);
+      if (open > 0) additive(() => glow(CITY.door.x, gy - 5, 16, '#ffd9a8', 0.35 * open));
+      R(CITY.door.x - 3.5, gy - 11, 7, 11, mix('#2a221b', '#ffd9a8', open));
+    }
+  }
+  for (const w of CITY.wins) {
+    let col = w.warm ? '#3a2c1f' : '#1c1916';
+    if (ang != null) {
+      const d = Math.abs(ang - angleTo(w));
+      if (d < BEAM_HALF) col = mix(col, '#fff1d0', (1 - d / BEAM_HALF) * 0.9 * on);
+    }
+    const found = w.hit && t >= w.lit;
+    if (found) {
+      col = C.body;
+      const pulse = w.file === 'LoginButton.tsx' && t > 10.0 ? 0.3 + 0.2 * Math.sin(t * 8) : 0;
+      additive(() => glow(w.x + 2, w.y + 1.75, 7, C.body, 0.4 + pulse));
+    }
+    R(w.x, w.y, 4, 3.5, col);
+    R(w.x, w.y + 3.5, 4, 0.5, '#0c0a08');
+  }
+  for (const w of CITY.wins) {
+    if (!w.hit || t < w.lit) continue;
+    alpha(seg(t, w.lit, w.lit + 0.3), () => {
+      const tw = MW(w.file, 3.4) + 3, left = w.x > 300;
+      const lx = left ? w.x - 2 - tw : w.x + 6, ly = w.y - 6;
+      line(left ? w.x : w.x + 4, w.y, left ? lx + tw : lx, ly + 2, C.body, 0.3);
+      rrect(lx, ly - 1.4, tw, 5.2, 0.8, 'rgba(12,10,8,0.88)', C.body, 0.3);
+      T(w.file, lx + 1.5, ly + 2.4, 3.4, C.shimmer);
+    });
+  }
+  // the flashlight beam
+  if (ang != null && on > 0) {
+    const L = 250, o = BEAM_O;
+    const g = ctx.createLinearGradient(TX(o.x), TY(o.y), TX(o.x + Math.cos(ang) * L), TY(o.y + Math.sin(ang) * L));
+    g.addColorStop(0, rgba('#fff1d0', 0.36 * on));
+    g.addColorStop(1, rgba('#fff1d0', 0));
+    additive(() => {
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(TX(o.x), TY(o.y));
+      ctx.lineTo(TX(o.x + Math.cos(ang - BEAM_HALF) * L), TY(o.y + Math.sin(ang - BEAM_HALF) * L));
+      ctx.lineTo(TX(o.x + Math.cos(ang + BEAM_HALF) * L), TY(o.y + Math.sin(ang + BEAM_HALF) * L));
+      ctx.closePath();
+      ctx.fill();
+      glow(o.x, o.y, 7, '#fff1d0', 0.55 * on);
+    });
+  }
+  // clawd
+  const inside = seg(t, 13.0, 13.5);
+  const flash = t > 6.6 && t < 10.6;
+  alpha(1 - inside, () => {
+    aura(mx, gy - inside * 2, s);
+    clawd(mx, gy - inside * 2, s, {
+      walk: t < 6.6 || (t > 10.6 && t < 13.0) ? mx / 11 : null,
+      look: 1, up: flash && ang != null && ang < -0.4, armR: flash ? 1 : 0,
+      mood: blinking(t, 2.9, 0.4) ? 'closed' : 'open', bob: flash ? 0 : 0,
+    });
+    if (flash) R(BEAM_O.x - 1.6, BEAM_O.y - 1, 3, 2, '#6d6660');
+  });
+  vignette(0.5);
+  hud(t, [
+    { t: 0.3, until: 6.7, k: 'spin', verb: 'Spelunking' },
+    { t: 6.7, k: 'tool', name: 'Search', args: '(pattern: "onLogin", path: "src")', done: 10.1 },
+    { t: 10.1, k: 'out', s: 'Found 3 files' },
+  ]);
+  fade(1 - seg(t, 0, 0.8));
+  if (t > 13.5) iris(CITY.door.x, CITY.door.y, lerp(150, 0, E.in2(seg(t, 13.5, 14.4))));
+  chapterCard(t, '第二幕', '文件之城');
+}
+
+// ─── Act 3: code is terrain ────────────────────────────────────────────────
+const TOK = { kw: C.permission, fn: '#f0c98a', str: '#9fd49a', num: C.shimmer, tag: '#fd8fc6', attr: '#8fc9c0', pun: '#8c847a', id: '#e8e2d9', '': '#e8e2d9' };
+const CODE = [
+  [['import', 'kw'], [' { ', 'pun'], ['useState', 'fn'], [' } ', 'pun'], ['from', 'kw'], [' ', ''], ['"react"', 'str']],
+  [],
+  [['export', 'kw'], [' ', ''], ['function', 'kw'], [' ', ''], ['LoginButton', 'fn'], ['({ ', 'pun'], ['onLogin', 'id'], [' }) {', 'pun']],
+  [['  ', ''], ['const', 'kw'], [' [', 'pun'], ['loading', 'id'], [', ', 'pun'], ['setLoading', 'fn'], ['] = ', 'pun'], ['useState', 'fn'], ['(', 'pun'], ['false', 'num'], [')', 'pun']],
+  [],
+  [['  ', ''], ['async', 'kw'], [' ', ''], ['function', 'kw'], [' ', ''], ['handleClick', 'fn'], ['() {', 'pun']],
+  [['    ', ''], ['setLoading', 'fn'], ['(', 'pun'], ['true', 'num'], [')', 'pun']],
+  [['    ', ''], ['await', 'kw'], [' ', ''], ['onLogin', 'fn']],
+  [['    ', ''], ['setLoading', 'fn'], ['(', 'pun'], ['false', 'num'], [')', 'pun']],
+  [['  ', ''], ['}', 'pun']],
+  [],
+  [['  ', ''], ['return', 'kw'], [' <', 'pun'], ['button', 'tag'], [' ', ''], ['onClick', 'attr'], ['={', 'pun'], ['handleClick', 'fn'], ['} ', 'pun'], ['disabled', 'attr'], ['={', 'pun'], ['loading', 'id'], ['}>', 'pun'], ['登录', 'str'], ['</', 'pun'], ['button', 'tag'], ['>', 'pun']],
+  [['}', 'pun']],
+];
+const BUG_LINE = 7;
+const CODE_X = 46, CODE_Y = 38, CODE_LH = 21, CODE_FS = 5.2, CODE_CW = CODE_FS * 0.6, SLAB_H = 8.6;
+const slabTop = i => CODE_Y + i * CODE_LH;
+const codeIndent = toks => (toks[0] && /^ +$/.test(toks[0][0])) ? toks[0][0].length : 0;
+const codeWidth = toks => toks.reduce((w, [s]) => w + MW(s, CODE_FS), 0);
+const BUG_X = CODE_X + codeWidth(CODE[BUG_LINE]);   // where the missing "()" belongs
+
+function codeLine(i, toks, o = {}) {
+  const y = slabTop(i);
+  T(String(i + 1), 38, y + 6.2, 4.4, o.sign ? o.signColor : '#5b544c', { a: 'right' });
+  if (o.sign) T(o.sign, 41.6, y + 6.2, 4.4, o.signColor);
+  if (!toks.length) return;
+  const x = CODE_X + codeIndent(toks) * CODE_CW, w = codeWidth(toks) - codeIndent(toks) * CODE_CW;
+  R(x - 2, y, w + 4, SLAB_H, o.slab || C.stone);
+  R(x - 2, y, w + 4, 0.8, o.slabHi || C.stoneHi);
+  R(x - 2, y + SLAB_H - 1, w + 4, 1, C.stoneLo);
+  R(x + w * 0.18, y + SLAB_H, 3, 1.4, C.stoneLo);
+  R(x + w * 0.52 + (i % 3), y + SLAB_H, 2, 2.4, C.stoneLo);
+  R(x + w * 0.83, y + SLAB_H, 2, 1, C.stoneLo);
+  let cx = CODE_X;
+  for (const [s, k] of toks) {
+    if (o.hl && s === o.hl) R(cx - 0.3, y + 1.2, MW(s, CODE_FS) + 0.6, SLAB_H - 2.4, C.diffAddWord);
+    if (s.trim()) T(s, cx, y + 6.2, CODE_FS, o.hl && s === o.hl ? C.white : TOK[k]);
+    cx += MW(s, CODE_FS);
+  }
+}
+const HOPS = [[1.0, 0, 58], [2.1, 2, 58], [2.9, 3, 64.2], [3.8, 5, 64.2], [4.6, 6, 70.5], [5.4, 7, 70.5]];
+function codeMascot(t) {
+  if (t < 0.3) return null;
+  if (t < 1.0) return { x: 58, gy: lerp(slabTop(0) - 44, slabTop(0), E.in2(seg(t, 0.3, 1.0))), air: 1 };
+  for (let k = 1; k < HOPS.length; k++) {
+    const [ta, la, xa] = HOPS[k - 1], [tb, lb, xb] = HOPS[k];
+    if (t >= tb) continue;
+    const hs = tb - 0.55;
+    if (t < hs) return { x: xa, gy: slabTop(la) };
+    const p = seg(t, hs, tb);
+    return { x: lerp(xa, xb, p), gy: lerp(slabTop(la), slabTop(lb), p) - 36 * p * (1 - p), air: 1 };
+  }
+  const gy = slabTop(BUG_LINE);
+  const x = lerp(70.5, 84, seg(t, 5.7, 6.4));
+  let jump = 0;
+  for (const j0 of [13.2, 13.9]) { const p = seg(t, j0, j0 + 0.5); if (p > 0 && p < 1) jump = 7 * Math.sin(Math.PI * p); }
+  return { x, gy, walking: t > 5.7 && t < 6.4, jump };
+}
+function permBox(t, a) {
+  const x = 122, y = 146, w = 132, h = 46;
+  alpha(a, () => {
+    rrect(x, y, w, h, 2, 'rgba(10,10,16,0.94)', C.permission, 0.5);
+    T('Edit file', x + 6, y + 9.5, 4.2, C.permission, { w: 700 });
+    runs([['Do you want to make this edit to ', C.white], ['LoginButton.tsx', C.white, 700], ['?', C.white]], x + 6, y + 18.5, 4);
+    const flash = win(t, 9.2, 9.65, 0.05, 0.3);
+    if (flash > 0) R(x + 3, y + 23.6, w - 6, 6.6, rgba(C.permission, 0.28 * flash));
+    line(x + 6.2, y + 25.2, x + 7.8, y + 26.8, C.permission, 0.45);
+    line(x + 7.8, y + 26.8, x + 6.2, y + 28.4, C.permission, 0.45);
+    T('1. Yes', x + 11, y + 28.4, 4, C.permission);
+    T('2. Yes, allow all edits during this session', x + 11, y + 35.4, 4, '#8f8f8f');
+    T('3. No, and tell Claude what to do differently', x + 11, y + 42.4, 4, '#8f8f8f');
+  });
+}
+function drawCodeAct(t) {
+  camKeys(t, [
+    [0, 150, 66, 1.0], [1.0, 150, 74, 1.0], [2.1, 150, 96, 1.0], [3.8, 148, 128, 1.0], [5.4, 136, 158, 1.05],
+    [6.6, 116, 170, 1.4], [7.6, 116, 170, 1.4], [8.2, 176, 166, 1.1], [10.2, 176, 166, 1.1],
+    [10.9, 114, 172, 1.45], [13.0, 118, 168, 1.35], [16, 112, 170, 1.2],
+  ]);
+  sky(t, { top: '#07070a', mid: '#0c0b10', bot: '#121016', milky: 0.35, stars: 0.55 });
+  // editor tab
+  rrect(44, 13, 74, 11, 1.2, '#1c1916', '#2e2925', 0.35);
+  T('LoginButton.tsx', 48.5, 20.6, 4.4, C.white);
+  T('src/components/', 122, 20.6, 4, C.dim);
+  R(40.5, 30, 0.5, CODE.length * CODE_LH + 8, '#221e1b');
+
+  const fixed = t >= 11.0, isAdd = t >= 11.5;
+  const settle = seg(t, 14.0, 15.6);
+  CODE.forEach((toks, i) => {
+    if (i !== BUG_LINE) return codeLine(i, toks);
+    if (!fixed) return codeLine(i, toks);
+    const newToks = toks.concat([['()', 'pun']]);
+    if (!isAdd) return codeLine(i, toks, { slab: C.diffDel, slabHi: C.diffDelWord, sign: '-', signColor: C.diffDelWord });
+    codeLine(i, newToks, {
+      slab: mix(C.diffAdd, C.stone, settle * 0.7), slabHi: mix(C.diffAddWord, C.stoneHi, settle * 0.7),
+      sign: settle < 1 ? '+' : null, signColor: C.diffAddWord, hl: settle < 1 ? '()' : null,
+    });
+  });
+  const by = slabTop(BUG_LINE);
+  // the gap where "()" should be
+  if (!fixed) {
+    const pulse = t > 6.4 ? 0.5 + 0.5 * Math.sin(t * 6) : 0;
+    const gc = mix('#4a3336', C.error, pulse * 0.7);
+    for (let k = 0; k < 7; k += 1.6) { R(BUG_X + k, by, 0.8, 0.8, gc); R(BUG_X + k, by + SLAB_H - 0.8, 0.8, 0.8, gc); }
+    for (let k = 0; k < SLAB_H; k += 1.6) R(BUG_X + 6.2, by + k, 0.8, 0.8, gc);
+  }
+  // the bug, and what it becomes
+  if (t < 11.0) {
+    const wig = Math.sin(t * 7) > 0 ? 0.4 : 0;
+    spr(BUG[Math.floor(t * 8) % 2], BUG_X + 0.5 + wig, by - 6, 1, BUG_PAL);
+  }
+  if (t > 10.95 && t < 11.5) {
+    const p = seg(t, 10.95, 11.5), r = rng(8);
+    for (let i = 0; i < 12; i++) {
+      const a = r() * Math.PI * 2, d = 3 + p * (6 + r() * 10);
+      alpha(1 - p, () => R(BUG_X + 4 + Math.cos(a) * d, by - 3 + Math.sin(a) * d, 1, 1, i % 2 ? C.permission : C.white));
+    }
+  }
+  if (t > 11.0) {
+    const p = seg(t, 11.0, 14.2);
+    const fx = BUG_X + 2 + 76 * E.inOut(p) + 5 * Math.sin(t * 5), fy = by - 5 - 96 * E.inOut(p) + 3 * Math.sin(t * 7);
+    additive(() => glow(fx + 3.5, fy + 2.5, 10, C.permission, 0.35 * (1 - p)));
+    spr(FLY[Math.floor(t * 10) % 2], fx, fy, 1.1, FLY_PAL);
+  }
+  // "(" and ")" drop into the gap
+  if (t > 10.2 && t < 11.0) {
+    [['(', 0, 10.7], [')', CODE_CW, 10.95]].forEach(([ch, dx, land]) => {
+      const p = seg(t, land - 0.5, land);
+      if (p <= 0) return;
+      const y = lerp(by - 46, by, E.in2(p));
+      additive(() => glow(BUG_X + dx + CODE_CW / 2, y + SLAB_H / 2, 8, C.body, 0.4));
+      R(BUG_X + dx - 0.2, y, CODE_CW + 0.4, SLAB_H, '#2a221c');
+      R(BUG_X + dx - 0.2, y, CODE_CW + 0.4, 0.6, C.body);
+      T(ch, BUG_X + dx, y + 6.2, CODE_FS, C.shimmer, { w: 700 });
+    });
+  }
+  // clawd
+  const m = codeMascot(t), s = 1.1;
+  if (m) {
+    let mood = blinking(t, 3.1, 0.6) ? 'closed' : 'open', look = 1, up = false;
+    if (t > 6.4 && t < 7.6) mood = 'wow';
+    if (t > 10.2) up = true;
+    if (t > 13.0) mood = 'happy';
+    if (m.air && t < 1.0) mood = 'closed';
+    aura(m.x, m.gy, s);
+    const c = clawd(m.x, m.gy, s, { mood, look, up, walk: m.walking ? m.x / 9 : null, jump: m.jump || (m.air ? 0.001 : 0), bob: !m.air && !m.walking && t > 7.6 ? Math.floor(t / 0.8) % 2 : 0 });
+    if (t > 6.45 && t < 7.4) spr(BANG, m.x + 10.5, c.top - 5.5 - E.back(seg(t, 6.45, 6.75)) * 1.2, 1.1, { '#': C.warning });
+  }
+  // the knock: may I edit this?
+  const boxA = seg(t, 7.6, 8.0) * (1 - seg(t, 9.6, 10.1));
+  if (boxA > 0) permBox(t, boxA);
+  if (t > 8.2 && t < 10.5) {
+    const pin = E.inOut(seg(t, 8.2, 9.1)), pout = E.inOut(seg(t, 9.7, 10.5));
+    const px = lerp(lerp(330, 138, pin), 340, pout), py = lerp(lerp(232, 170.5, pin), 250, pout);
+    const pressed = t > 9.2 && t < 9.35;
+    if (t > 9.2 && t < 9.75) {
+      const rp = seg(t, 9.2, 9.75);
+      ctx.strokeStyle = rgba(C.white, 0.7 * (1 - rp)); ctx.lineWidth = Math.max(1, TL(0.4));
+      ctx.beginPath(); ctx.arc(TX(138), TY(170.5), TL(2 + rp * 9), 0, Math.PI * 2); ctx.stroke();
+    }
+    pointer(px, py, 0.9, pressed);
+  }
+  vignette(0.5);
+  hud(t, [
+    { t: 0.4, k: 'tool', name: 'Read', args: '(src/components/LoginButton.tsx)', done: 1.3 },
+    { t: 1.3, k: 'out', s: 'Read 13 lines' },
+    { t: 7.7, k: 'tool', name: 'Update', args: '(src/components/LoginButton.tsx)', done: 11.4 },
+    { t: 11.4, k: 'out', s: 'Updated LoginButton.tsx with 1 addition and 1 removal' },
+  ]);
+  if (t < 1.1) iris(100, 40, lerp(0, 300, E.inOut(seg(t, 0, 1.1))));
+  if (t > 15.1 && m) iris(m.x, m.gy - 6, lerp(160, 0, E.in2(seg(t, 15.1, 16.0))));
+  chapterCard(t, '第三幕', '代码的地形');
+}
+
+// ─── Act 4: the test garden ────────────────────────────────────────────────
+const TESTS = ['renders', 'label', 'onLogin()', 'loading', 'disabled', 'error', 'a11y', 'snapshot'];
+const GARDEN = { gy: 142, x0: 78, dx: 26, scan0: 1.8, scan1: 5.6, sx0: 60, sx1: 282 };
+const bloomAt = i => GARDEN.scan0 + (GARDEN.x0 + i * GARDEN.dx - GARDEN.sx0) / (GARDEN.sx1 - GARDEN.sx0) * (GARDEN.scan1 - GARDEN.scan0);
+function flower(x, gy, h, b, failed) {
+  const sc = '#2f6b3c';
+  R(x, gy - h, 1, h, sc);
+  R(x + 1, gy - h * 0.55, 2, 1, sc);
+  R(x - 2, gy - h * 0.3, 2, 1, sc);
+  const hx = x + 0.5, hy = gy - h - 2;
+  if (b <= 0) spr(['.b.', 'bbb', '.b.'], hx - 1.5, hy - 1, 1, { b: failed ? C.diffDelWord : '#56655a' });
+  else if (b < 0.5) spr(['.g.', 'ggg', '.g.'], hx - 1.5, hy - 1, 1, { g: '#6fcf85' });
+  else {
+    additive(() => glow(hx, hy + 0.5, 9, C.success, 0.35));
+    spr(['.g.g.', 'ggggg', 'ggcgg', 'ggggg', '.g.g.'], hx - 2.5, hy - 2, 1, { g: C.success, c: '#eaffea' });
+  }
+  return [hx, hy];
+}
+function drawTestsAct(t) {
+  const gy = GARDEN.gy, mx = 40, s = 1.4;
+  camKeys(t, [[0, 160, 96, 1.05], [5.6, 160, 96, 1.05], [8.0, 150, 104, 1.18], [11, 150, 104, 1.18]]);
+  sky(t, { mid: '#0c0f0c', bot: '#0f1712', milky: 0.6 });
+  const done = seg(t, 5.8, 6.6);
+  if (done > 0) additive(() => { glow(170, gy, 150, C.success, 0.1 * done); glow(170, gy - 30, 90, C.success, 0.05 * done); });
+  R(-120, gy, 560, 60, '#0c100d');
+  R(-120, gy, 560, 0.8, '#223628');
+  for (let x = -118; x < 440; x += 3) { const h = ((x * 7919) % 5 + 5) % 5; if (h > 1) R(x, gy - h * 0.6, 0.8, h * 0.6, '#274232'); }
+  const scanX = lerp(GARDEN.sx0, GARDEN.sx1, seg(t, GARDEN.scan0, GARDEN.scan1));
+  TESTS.forEach((name, i) => {
+    const x = GARDEN.x0 + i * GARDEN.dx, h = 11 + ((i * 7) % 5);
+    const b = seg(t, bloomAt(i), bloomAt(i) + 0.4);
+    const [hx, hy] = flower(x, gy, h, b, i === 2);
+    T(name, x + 0.5, gy + 9, 3.3, b >= 0.5 ? '#7fbf8c' : '#6d665e', { a: 'center' });
+    const age = t - bloomAt(i) - 0.2;
+    if (age > 0 && age < 1.3) alpha(1 - age / 1.3, () => spr(CHECK, hx - 2.5, hy - 8 - age * 8, 1, { '#': C.success }));
+  });
+  if (t > GARDEN.scan0 && t < GARDEN.scan1 + 0.25) {
+    const a = 1 - seg(t, GARDEN.scan1, GARDEN.scan1 + 0.25);
+    additive(() => {
+      glow(scanX, gy - 18, 24, C.bash, 0.16 * a);
+      R(scanX - 0.5, gy - 46, 1, 46, rgba(C.bash, 0.75 * a));
+      for (let k = 0; k < 6; k++) R(scanX - 2 - k * 2.5, gy - 6 - ((k * 11 + Math.floor(t * 20)) % 34), 1, 1, rgba(C.bash, 0.6 * a * (1 - k / 6)));
+    });
+  }
+  if (t > 5.8) {
+    const r = rng(12);
+    for (let i = 0; i < 38; i++) {
+      const t0 = 5.8 + r() * 3.6, x0 = 70 + r() * 200, sp = 6 + r() * 8, ph = r() * 6;
+      const age = t - t0;
+      if (age < 0 || age > 2.6) continue;
+      const fx = x0 + Math.sin(age * 2 + ph) * 3, fy = gy - 8 - age * sp;
+      alpha(Math.min(1, age / 0.3) * (1 - age / 2.6) * (0.6 + 0.4 * Math.sin(t * 9 + ph)), () => {
+        additive(() => glow(fx, fy, 3, C.success, 0.5));
+        R(fx, fy, 1, 1, '#b8f5c4');
+      });
+    }
+  }
+  let jump = 0;
+  for (const j0 of [6.3, 7.1]) { const p = seg(t, j0, j0 + 0.6); if (p > 0 && p < 1) jump = 9 * Math.sin(Math.PI * p); }
+  if (t > 1.0 && t < 1.9) {
+    const rp = seg(t, 1.0, 1.9);
+    ctx.strokeStyle = rgba(C.bash, 0.8 * (1 - rp)); ctx.lineWidth = Math.max(1, TL(0.5));
+    ctx.beginPath(); ctx.arc(TX(mx), TY(gy - 7), TL(4 + rp * 30), 0, Math.PI * 2); ctx.stroke();
+  }
+  aura(mx, gy, s);
+  clawd(mx, gy, s, {
+    mood: t > 5.8 ? 'happy' : (blinking(t, 3.4, 1) ? 'closed' : 'open'), look: 1,
+    arms: t > 0.9 && t < 1.9 ? 1 : (jump > 0 ? 1 : 0), jump, bob: jump ? 0 : Math.floor(t / 0.8) % 2,
+  });
+  vignette(0.5);
+  hud(t, [
+    { t: 0.9, k: 'tool', name: 'Bash', args: '(npm test)', done: 5.8 },
+    { t: 5.8, k: 'out', s: 'Tests  8 passed (8)' },
+  ]);
+  if (t < 1.0) iris(mx, gy - 8, lerp(0, 300, E.inOut(seg(t, 0, 1.0))));
+  fade(seg(t, 10.2, 11.0));
+  chapterCard(t, '第四幕', '测试花园');
+}
+
+// ─── Act 5: every commit is a lantern ──────────────────────────────────────
+const COMMITS = [
+  { x: 74, y: 44, h: '9e1c0a4', m: 'init' },
+  { x: 112, y: 16, h: '2b7f3d1', m: 'feat: 登录页' },
+  { x: 144, y: 54, h: '7aa19c3', m: 'feat: 暗色模式' },
+  { x: 168, y: -14, h: '5d0e9b2', m: 'style: 按钮改成圆角' },
+  { x: 210, y: -30, h: 'a1b2c3d', m: 'fix: 输入框对齐' },
+];
+const FRESH = { x: 256, y: -50, h: '3f9c2ab', m: 'fix: 登录按钮没有调用 onLogin' };
+const EDGES = [[0, 1], [1, 2], [1, 3], [2, 3], [3, 4]];
+const HILL = x => 146 + Math.pow((x - 160) / 10, 2) * 0.16;
+function hill() {
+  for (let x = -170; x < 500; x += 2) {
+    const y = HILL(x);
+    R(x, y, 2, 220, '#0d0b0a');
+    R(x, y, 2, 0.8, '#241e19');
+    if (((x * 31) % 7 + 7) % 7 === 0) R(x + 0.5, y - 1.4, 0.8, 1.4, '#2a241e');
+  }
+}
+function lanternSky(t, fresh, labelA = 1) {
+  const pos = (c, i) => [c.x, c.y + Math.sin(t * 0.8 + i * 1.7) * 1.2];
+  for (const [a, b] of EDGES) {
+    const [x1, y1] = pos(COMMITS[a], a), [x2, y2] = pos(COMMITS[b], b);
+    line(x1 + 3.2, y1 + 4, x2 + 3.2, y2 + 4, 'rgba(160,120,80,0.35)', 0.35);
+  }
+  if (fresh > 0) {
+    const [x1, y1] = pos(COMMITS[4], 4), [x2, y2] = [FRESH.x, FRESH.y + Math.sin(t * 0.8 + 9) * 1.2];
+    const e = E.out(fresh);
+    line(x1 + 3.2, y1 + 4, lerp(x1, x2, e) + 3.2, lerp(y1, y2, e) + 4, `rgba(235,159,127,${lerp(0.9, 0.45, seg(fresh, 0.7, 1))})`, 0.4);
+  }
+  COMMITS.forEach((c, i) => {
+    const [x, y] = pos(c, i);
+    lantern(x, y, 0.9, 1, t, i);
+    alpha(labelA, () => {
+      T(c.h, x + 8.5, y + 4.6, 4, C.body);
+      T(c.m, x + 8.5 + MW(c.h + ' ', 4), y + 4.6, 4, '#a39a8f');
+    });
+  });
+}
+function drawLanternAct(t) {
+  camKeys(t, [[0, 160, 118, 1.5], [4.6, 162, 116, 1.6], [5.6, 162, 108, 1.45], [9.8, 165, 56, 0.74], [12, 165, 56, 0.74]]);
+  sky(t);
+  lanternSky(t, seg(t, 9.6, 10.3));
+  hill();
+  const mx = 160, gy = 146, s = 1.4;
+  const fly = seg(t, 5.0, 9.6), e = E.inOut(fly);
+  const lit = seg(t, 4.0, 4.5);
+  const ls = lerp(1.2, 0.9, e);
+  const lcx = lerp(160, FRESH.x + 3.15, e) + 7 * Math.sin(fly * Math.PI * 2) * (1 - fly);
+  const lcy = lerp(125, FRESH.y + 4.05, e) + (t > 9.6 ? Math.sin(t * 0.8 + 9) * 1.2 : 0);
+  if (fly > 0 && fly < 1) {
+    for (let k = 1; k <= 8; k++) {
+      const pk = seg(t - k * 0.11, 5.0, 9.6);
+      if (pk <= 0) continue;
+      const ek = E.inOut(pk);
+      const ex = lerp(160, FRESH.x + 3.15, ek) + 7 * Math.sin(pk * Math.PI * 2) * (1 - pk) + Math.sin(k * 2.1) * 1.5;
+      const ey = lerp(125, FRESH.y + 4.05, ek) + 5 + k * 1.3;
+      alpha(1 - k / 9, () => R(ex, ey, 0.8, 0.8, k % 2 ? '#ffcf7a' : C.shimmer));
+    }
+  }
+  lantern(lcx - 3.5 * ls, lcy - 4.5 * ls, ls, lit, t, 7);
+  // the commit message, written on a paper tag
+  const tagA = 1 - seg(t, 5.0, 5.6);
+  if (t > 0.8 && tagA > 0) {
+    const n = Math.floor(seg(t, 1.0, 3.6) * FRESH.m.length + 1e-6);
+    const tw = MW(FRESH.m, 3.8) + 5;
+    alpha(tagA * seg(t, 0.8, 1.1), () => {
+      line(lcx + 4, lcy - 1, 168, 115.5, '#8a6440', 0.3);
+      rrect(168, 111, tw, 7.6, 0.8, C.paper);
+      T(FRESH.m.slice(0, n), 170.5, 116.6, 3.8, '#3a2e26');
+      if (n < FRESH.m.length && (t % 0.5) < 0.3) R(170.5 + MW(FRESH.m.slice(0, n), 3.8), 112.4, 1.6, 5, '#3a2e26');
+      if (t > 4.2) alpha(seg(t, 4.2, 4.5), () => T(FRESH.h, 168, 108.6, 3.8, C.body, { w: 700 }));
+    });
+  }
+  if (t > 9.6) alpha(seg(t, 9.6, 10.2), () => {
+    T(FRESH.h, lcx + 5.3, lcy + 0.6, 4, C.body);
+    T(FRESH.m, lcx + 5.3 + MW(FRESH.h + ' ', 4), lcy + 0.6, 4, C.caption);
+  });
+  aura(mx, gy, s);
+  clawd(mx, gy, s, {
+    mood: t > 9.8 ? 'happy' : (blinking(t, 3.2, 0.5) ? 'closed' : 'open'),
+    up: t > 4.9, look: t > 6.5 ? 1 : 0, arms: t > 0.6 && t < 5.2 ? 1 : 0, bob: Math.floor(t / 0.8) % 2,
+  });
+  vignette(0.5);
+  hud(t, [
+    { t: 1.0, k: 'tool', name: 'Bash', args: '(git commit -m "' + FRESH.m + '")', done: 4.2 },
+    { t: 4.2, k: 'out', s: '[main 3f9c2ab] ' + FRESH.m },
+    { t: 5.0, k: 'tool', name: 'Bash', args: '(git push)', done: 9.6 },
+    { t: 9.6, k: 'out', s: 'a1b2c3d..3f9c2ab  main -> main' },
+  ]);
+  fade(1 - seg(t, 0, 0.8));
+  chapterCard(t, '第五幕', '天灯');
+}
+
+// ─── Act 6: folding memory ─────────────────────────────────────────────────
+// The sky fills with the conversation; when the context is nearly full it is
+// folded into one small cube. The commit lanterns stay: git keeps its history.
+const MORE_LETTERS = [['加一个暗色模式', 0.3, 40], ['给注册页也写上测试', 1.4, 262], ['把 api.ts 重构一下', 2.5, 96]];
+const MORE_COMMITS = [['b4e8d21', 1.0, -34], ['0c7f3aa', 2.1, 22], ['e91d5b6', 3.2, 58]];
+const FRAG_POOL = ['> 登录按钮点了没反应', 'Found 3 files', 'Read 13 lines', 'await onLogin()', 'Tests  8 passed (8)', '[main 3f9c2ab]',
+  'main -> main', 'useState(false)', 'handleClick', 'git push', 'npm test', 'src/components/', 'LoginButton.tsx', '1 addition, 1 removal',
+  '> 加一个暗色模式', 'prefers-color-scheme', '--bg: #141312', 'theme.ts', 'Update(theme.ts)', 'Read 88 lines', '> 给注册页也写上测试',
+  'SignupForm.test.tsx', 'expect(onSubmit)', '.toHaveBeenCalled()', 'Tests  14 passed (14)', '> 把 api.ts 重构一下', 'export async function',
+  'fetchJSON(url)', 'try { … } catch', 'Updated api.ts', 'Search("fetch(")', 'Found 9 files', 'git commit', 'b4e8d21', 'Noodling…',
+  'Percolating…', 'Pondering…', '{ ok: true }', 'res.status', 'import { api }', '200 OK', 'Moseying…'];
+const FRAGS = (() => {
+  const r = rng(33), cols = ['#8a8279', '#8a8279', '#a39a8f', C.body, C.permission, C.success, C.plan, '#6f6861'];
+  const out = [];
+  for (let i = 0; i < 54; i++) {
+    let x, y;
+    do { x = -40 + r() * 400; y = -60 + r() * 176; } while ((Math.abs(x - 160) < 36 && y > 96) || (x < 138 && y < -12));
+    out.push({ s: FRAG_POOL[i % FRAG_POOL.length], x, y, t0: 0.3 + r() * 4.3, c: cols[Math.floor(r() * cols.length)], sz: 3.6 + r() * 1.4, d: r() * 0.9, ph: r() * 6 });
+  }
+  return out;
+})();
+const FOLD = { x: 160, y: 108 };
+function cubeOnHead(mx, top, t, a = 1) {
+  alpha(a, () => {
+    additive(() => glow(mx, top - 3, 8, C.shimmer, 0.3));
+    spr(CUBE, mx - 3, top - 6, 1, CUBE_PAL);
+  });
+}
+function drawCompactAct(t) {
+  camKeys(t, [[0, 165, 56, 0.74], [5.0, 165, 56, 0.74], [7.8, 162, 80, 0.95], [11, 160, 100, 1.25]]);
+  sky(t);
+  const busy = seg(t, 0.3, 3) * (1 - seg(t, 6.5, 8.2));
+  lanternSky(t, 1, 1 - busy * 0.65);
+  hill();
+  const mx = 160, gy = 146, s = 1.4;
+  // more commits float up and away
+  for (const [h, t0, dx] of MORE_COMMITS) {
+    const p = seg(t, t0, t0 + 1.8);
+    if (p <= 0 || p >= 1) continue;
+    const x = lerp(mx, mx + dx, E.inOut(p)), y = lerp(122, -140, E.in2(p));
+    lantern(x - 3.2, y - 4, 0.9, 1, t, t0);
+    T(h, x + 5, y + 1, 3.6, C.body);
+  }
+  // the words pile up … and are folded away
+  for (const f of FRAGS) {
+    if (t < f.t0) continue;
+    const pp = seg(t, 5.0 + f.d, 6.2 + f.d);
+    if (pp >= 1) continue;
+    const e = E.in2(pp);
+    const x = lerp(f.x, FOLD.x, e), y = lerp(f.y + Math.sin(t * 0.6 + f.ph), FOLD.y, e);
+    alpha(seg(t, f.t0, f.t0 + 0.4) * 0.85 * (1 - pp * 0.5), () => T(f.s, x, y, f.sz * (1 - 0.8 * pp), f.c, { a: 'center' }));
+  }
+  for (const [msg, t0, x0] of MORE_LETTERS) {
+    const p = seg(t, t0, t0 + 1.0);
+    if (p <= 0) continue;
+    if (p < 1) {
+      const [lx, ly] = letterPath(p, x0, -110, mx, 118, 12);
+      letterBox(lx, ly, msg, 1 - seg(p, 0.85, 1));
+    } else if (t < t0 + 1.35) additive(() => glow(mx, gy - 12, 14, C.paper, 0.4 * (1 - seg(t, t0 + 1.0, t0 + 1.35))));
+  }
+  const grow = seg(t, 5.4, 7.4), drop = E.inOut(seg(t, 7.6, 8.2));
+  const top = gy - 10 * s - (Math.floor(t / 0.8) % 2) * s;
+  if (grow > 0 && drop < 1) {
+    const cs = Math.max(0.05, E.back(grow));
+    const cy = lerp(FOLD.y, top - 3, drop);
+    additive(() => glow(FOLD.x, cy, 18 * cs, C.shimmer, 0.45 * grow));
+    spr(CUBE, FOLD.x - 3 * cs, cy - 3 * cs, cs, CUBE_PAL);
+    if (t > 7.35 && t < 7.9) {
+      const rp = seg(t, 7.35, 7.9);
+      ctx.strokeStyle = rgba(C.white, 0.8 * (1 - rp)); ctx.lineWidth = Math.max(1, TL(0.4));
+      ctx.beginPath(); ctx.arc(TX(FOLD.x), TY(FOLD.y), TL(4 + rp * 22), 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  let mood = blinking(t, 3.0, 0.2) ? 'closed' : 'open';
+  if (t > 5.0 && t < 7.4) mood = 'closed';
+  if (t > 8.2 && t < 9.6) mood = 'happy';
+  aura(mx, gy, s);
+  clawd(mx, gy, s, { mood, up: t < 7.8, look: 0, bob: Math.floor(t / 0.8) % 2, arms: t > 7.5 && t < 8.3 ? 1 : 0 });
+  if (drop >= 1) cubeOnHead(mx, top, t);
+  vignette(0.5);
+  hud(t, [
+    { t: 0.2, until: 4.6, k: 'warn', s: tt => `Context left until auto-compact: ${Math.round(lerp(31, 3, seg(tt, 0.2, 4.6)))}%` },
+    { t: 4.6, until: 8.2, k: 'spin', verb: 'Compacting conversation', esc: false },
+    { t: 8.2, k: 'out', s: 'Compacted' },
+  ]);
+  fade(seg(t, 10.3, 11.0));
+  chapterCard(t, '第六幕', '折起来的记忆');
+}
+
+// ─── Finale: back to the prompt, back out through its eye ──────────────────
+const SAY1 = '修好了：handleClick 里的 onLogin 少了一对括号，从来没被调用过。';
+const SAY2 = '已经补上 ()，8 个测试全部通过，改动也提交了。';
+const FINAL_LINES = [
+  { k: 'user', s: MSG }, { k: 'blank' },
+  { k: 'tool', name: 'Search', args: '(pattern: "onLogin", path: "src")' }, { k: 'out', s: 'Found 3 files' },
+  { k: 'tool', name: 'Update', args: '(src/components/LoginButton.tsx)' }, { k: 'out', s: 'Updated src/components/LoginButton.tsx with 1 addition and 1 removal' },
+  { k: 'tool', name: 'Bash', args: '(npm test)' }, { k: 'out', s: 'Tests  8 passed (8)' },
+  { k: 'tool', name: 'Bash', args: '(git commit -m "' + FRESH.m + '" && git push)' }, { k: 'out', s: '[main 3f9c2ab] ' + FRESH.m },
+  { k: 'say', s: SAY1 }, { k: 'cont', s: SAY2 },
+];
+function drawFinale(t) {
+  if (t < 8.8) {
+    const gy = HOME.gy, s = 1.5;
+    const mx = lerp(-20, HOME.mx, seg(t, 0.2, 3.4));
+    const walking = t > 0.2 && t < 3.4;
+    const still = t > 7.4;
+    const eye = { x: HOME.mx - 8 * s + 4.5 * s, y: gy - 10 * s + 3 * s };
+    const camA = [[0, 160, 90, 1], [3.4, 158, 96, 1.08], [7.6, 154, 106, 1.3]];
+    if (t > 7.6) zoomFrom(154, 106, 1.3, eye.x, eye.y, seg(t, 7.6, 8.8), 300);
+    else camKeys(t, camA);
+    sky(t);
+    homeGround(t);
+    aura(mx, gy, s);
+    const wave = t > 4.3 && t < 5.9 ? Math.floor((t - 4.3) / 0.2) % 2 : 0;
+    const bob = walking || still ? 0 : Math.floor(t / 0.8) % 2;
+    const c = clawd(mx, gy, s, {
+      walk: walking ? mx / 11 : null, look: walking ? 1 : 0, armR: wave,
+      mood: !still && (blinking(t, 3.1, 0.3) || (t > 3.85 && t < 4.0)) ? 'closed' : 'open', bob,
+    });
+    cubeOnHead(mx, c.top, t);
+    vignette(0.5);
+    hud(t, [
+      { t: 4.0, k: 'say', s: SAY1, cps: 22 },
+      { t: 4.2 + [...SAY1].length / 22, k: 'cont', s: SAY2, cps: 22 },
+    ]);
+    fade(1 - seg(t, 0, 0.8));
+    chapterCard(t, '终章', '你的世界');
+    return;
+  }
+  zoomInto(TERM_EYE.x, TERM_EYE.y, 1 - seg(t, 8.8, 11.4), 380);
+  drawTerminal({
+    title: '✳ Fix login button', shell: 'claude', shellCursor: false, banner: true,
+    clawd: { closedR: t > 12.9 && t < 13.3 }, lines: FINAL_LINES, input: '',
+  }, t);
+  setCam(160, 90, 1);
+  titleCard(seg(t, 13.6, 14.6), t, t > 15.0 && t < 15.45 ? 'wink' : 'open');
+}
+
+// ─── Timeline ──────────────────────────────────────────────────────────────
+const SCENES = [
+  { id: 'prologue', dur: 10.5, draw: drawPrologue },
+  { id: 'sky', dur: 12, draw: drawSkyAct },
+  { id: 'city', dur: 14.4, draw: drawCityAct },
+  { id: 'code', dur: 16, draw: drawCodeAct },
+  { id: 'tests', dur: 11, draw: drawTestsAct },
+  { id: 'lantern', dur: 12, draw: drawLanternAct },
+  { id: 'compact', dur: 11, draw: drawCompactAct },
+  { id: 'finale', dur: 16, draw: drawFinale },
+];
+let _acc = 0;
+for (const sc of SCENES) { sc.start = _acc; _acc += sc.dur; }
+const TOTAL = _acc;
+const SC = Object.fromEntries(SCENES.map(s => [s.id, s]));
+const CAPTIONS = {
+  prologue: [[3.0, 6.3, '你看到的，是一个终端。'], [6.7, 10.2, '可在小橘块的眼里——']],
+  sky: [[1.6, 6.6, '你敲下的每一句话，都是从天上掉下来的一封信。'], [7.4, 11.4, '读完信，它先想一想。头顶转个不停的小星星，就是它在动脑筋。']],
+  city: [[0.6, 3.4, '文件夹是一栋栋楼，文件是楼里的一扇扇窗。'], [3.6, 6.6, '远处那座望不到顶的山叫 node_modules，它一般不去。'], [6.9, 10.4, '搜索是它的手电筒：要找的东西，一照就亮。'], [10.8, 14.0, '找到了。它推开 components 的门，走了进去。']],
+  code: [[1.2, 5.4, '打开文件，代码就成了脚下的路，缩进是一级一级的台阶。'], [5.8, 7.7, '然后，它看见了一只真正的 bug。'], [7.9, 10.4, '动手之前，它总会先敲敲门：这里，可以改吗？'], [10.8, 15.2, '原来是少了一对括号。补上以后，bug 变成了蝴蝶。']],
+  tests: [[1.0, 5.6, '再跑一遍测试。测试一个个通过，像花一朵朵地开。'], [6.0, 10.1, '八个测试，全部通过。它高兴得原地蹦了两下。']],
+  lantern: [[1.0, 4.9, '改好了，就把这件事写成一句话，装进一盏灯里。'], [5.4, 11.6, '每一次提交，都是一盏放上天的灯。它们连成星座，一直亮着。']],
+  compact: [[0.8, 4.7, '日子久了，天上的字越积越多。那是它的记忆，记忆也会满。'], [5.3, 10.2, '满了，它就把过去折成一个小方块，顶在头上，接着走。']],
+  finale: [[4.0, 7.5, '最后，它回到输入框旁边，把做过的事讲给你听。'], [11.0, 13.8, '你的项目，就是它的整个世界。']],
+};
+const CHAPTERS = [
+  { id: 'prologue', num: '序', title: '你看到的终端', seen: '一只刚眨了下眼的小橘块', real: '启动 <code>claude</code>，敲下一句话' },
+  { id: 'sky', num: '一', title: '天上掉下来的信', seen: '从天而降的信，头顶转个不停的小星星', real: '你发出的提示词；思考时的 <code>✻ Pondering…</code>' },
+  { id: 'city', num: '二', title: '文件之城', seen: '一栋栋楼、一扇扇窗、手电筒、望不到顶的山', real: '文件夹与文件、<code>Search</code>（grep）、<code>node_modules</code>' },
+  { id: 'code', num: '三', title: '代码的地形', seen: '台阶、虫子、敲门、蝴蝶', real: '缩进、bug、改动前的权限确认、<code>Update</code> 改代码' },
+  { id: 'tests', num: '四', title: '测试花园', seen: '一朵接一朵开的花', real: '<code>npm test</code>，8 个测试逐个通过' },
+  { id: 'lantern', num: '五', title: '天灯', seen: '放上天空、连成星座的灯', real: '<code>git commit</code> 和 <code>git push</code>，提交历史' },
+  { id: 'compact', num: '六', title: '折起来的记忆', seen: '满天的字，被折成一个小方块', real: '上下文快满时的自动压缩（<code>Compacting conversation…</code>）' },
+  { id: 'finale', num: '终', title: '你的世界', seen: '回到输入框旁边，等你开口', real: '汇报做了什么，然后等你的下一句话' },
+];
+
+function render(time) {
+  time = clamp(time, 0, TOTAL - 1e-4);
+  let sc = SCENES[SCENES.length - 1];
+  for (const s of SCENES) if (time < s.start + s.dur) { sc = s; break; }
+  const t = time - sc.start;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  setCam(160, 90, 1);
+  ctx.save();
+  sc.draw(t);
+  ctx.restore();
+  setCam(160, 90, 1);
+  let cap = '', ca = 0;
+  for (const [a, b, s] of CAPTIONS[sc.id]) { const w = win(t, a, b, 0.35, 0.35); if (w > 0) { cap = s; ca = w; } }
+  caption(cap, ca);
+  return { id: sc.id, t, cap };
+}
+
+// ─── Sound: a tiny synth, off until you turn it on ─────────────────────────
+// The same voices play live in the page and render offline for the video.
+const audio = (() => {
+  const N = n => 440 * Math.pow(2, (n - 69) / 12);
+  function voices(ac, out) {
+    const tone = (f, t0, dur, type = 'sine', g0 = 0.1, att = 0.006) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(g0, t0 + att); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + dur + 0.05);
+    };
+    const hiss = (t0, dur, g0, f0, f1) => {
+      const len = Math.floor(ac.sampleRate * dur), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+      const r = rng(len);
+      for (let i = 0; i < len; i++) d[i] = r() * 2 - 1;
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+      f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      const g = ac.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(g0, t0 + dur * 0.35); g.gain.linearRampToValueAtTime(0, t0 + dur);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t0); src.stop(t0 + dur);
+    };
+    let k = 0;
+    return {
+      key: t0 => tone(1700 + ((k++ * 157) % 500), t0, 0.035, 'square', 0.02),
+      enter: t0 => tone(N(76), t0, 0.15, 'triangle', 0.07),
+      dive: t0 => hiss(t0, 1.8, 0.05, 200, 3200),
+      chime: t0 => { tone(N(84), t0, 1.0, 'sine', 0.1); tone(N(91), t0 + 0.07, 1.2, 'sine', 0.06); },
+      think: t0 => [79, 83, 86].forEach((n, i) => tone(N(n), t0 + i * 0.09, 0.45, 'sine', 0.045)),
+      click: t0 => tone(2600, t0, 0.02, 'square', 0.04),
+      ping: t0 => tone(N(88), t0, 0.4, 'sine', 0.06),
+      hop: t0 => tone(N(79), t0, 0.08, 'triangle', 0.04),
+      bug: t0 => { tone(N(62), t0, 0.12, 'square', 0.03); tone(N(59), t0 + 0.13, 0.14, 'square', 0.03); },
+      knock: t0 => { tone(190, t0, 0.09, 'triangle', 0.16); tone(175, t0 + 0.17, 0.09, 'triangle', 0.16); },
+      drop: t0 => tone(N(72), t0, 0.2, 'triangle', 0.08),
+      flutter: t0 => { for (let i = 0; i < 5; i++) tone(N(84 + i * 2), t0 + i * 0.05, 0.3, 'sine', 0.04); },
+      bloom: (t0, i) => tone(N([72, 74, 76, 79, 81, 84, 86, 88][i]), t0, 0.6, 'sine', 0.07),
+      success: t0 => [72, 76, 79, 84].forEach((n, i) => tone(N(n), t0 + i * 0.07, 1.3, 'triangle', 0.05)),
+      light: t0 => { hiss(t0, 0.4, 0.04, 800, 2400); tone(N(79), t0 + 0.1, 0.9, 'sine', 0.05); },
+      whoosh: t0 => hiss(t0, 2.4, 0.05, 300, 1600),
+      star: t0 => { tone(N(91), t0, 1.4, 'sine', 0.05); tone(N(96), t0 + 0.1, 1.4, 'sine', 0.035); },
+      pop: t0 => tone(N(81), t0, 0.16, 'sine', 0.05),
+      fold: t0 => { hiss(t0, 1.5, 0.06, 2600, 300); tone(N(60), t0 + 1.4, 0.7, 'sine', 0.1); },
+      end: t0 => [60, 64, 67, 72, 76].forEach((n, i) => tone(N(n), t0 + i * 0.12, 2.4, 'sine', 0.05)),
+    };
+  }
+  // one soft chord per scene, under everything
+  const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [50, 57, 65], [43, 50, 59], [48, 55, 64], [45, 52, 60], [41, 48, 57]];
+  function makePad(ac, out) {
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+    const g = ac.createGain(); g.gain.value = 0.045; lp.connect(g); g.connect(out);
+    const osc = [0, 1, 2].map(i => {
+      const o = ac.createOscillator(); o.type = i === 2 ? 'triangle' : 'sine';
+      o.frequency.value = N(CHORDS[0][i]); o.connect(lp); o.start(); return o;
+    });
+    return { osc, gain: g };
+  }
+  const EVENTS = [];
+  const ev = (id, t, name, arg) => EVENTS.push([SC[id].start + t, name, arg]);
+  for (let i = 0; i < 6; i++) ev('prologue', 2.6 + i * 0.12, 'key');
+  ev('prologue', 3.5, 'enter');
+  for (let i = 0; i < [...MSG].length; i++) ev('prologue', 4.0 + i * 0.107, 'key');
+  ev('prologue', 5.95, 'enter');
+  ev('prologue', 8.8, 'dive');
+  ev('sky', 4.6, 'chime'); ev('sky', 8.0, 'think');
+  ev('city', 6.8, 'click');
+  for (const w of CITY.wins) if (w.hit) ev('city', w.lit, 'ping');
+  ev('city', 10.1, 'ping'); ev('city', 12.4, 'click');
+  for (const [tt] of HOPS) ev('code', tt, 'hop');
+  ev('code', 6.45, 'bug'); ev('code', 7.7, 'knock'); ev('code', 9.2, 'click');
+  ev('code', 10.7, 'drop'); ev('code', 10.95, 'drop'); ev('code', 11.0, 'flutter');
+  TESTS.forEach((_, i) => ev('tests', bloomAt(i), 'bloom', i));
+  ev('tests', 5.8, 'success');
+  for (let i = 0; i < 12; i++) ev('lantern', 1.0 + i * 0.21, 'key');
+  ev('lantern', 4.0, 'light'); ev('lantern', 5.0, 'whoosh'); ev('lantern', 9.6, 'star');
+  for (const [, t0] of MORE_LETTERS) ev('compact', t0 + 1.0, 'pop');
+  ev('compact', 5.0, 'fold'); ev('compact', 7.4, 'pop');
+  ev('finale', 7.8, 'dive'); ev('finale', 13.6, 'end');
+  EVENTS.sort((a, b) => a[0] - b[0]);
+
+  let ac = null, master = null, pad = null, sfx = null, on = false, live = false, chord = -1;
+  function ensure() {
+    if (ac) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+    pad = makePad(ac, master);
+    sfx = voices(ac, master);
+    return true;
+  }
+  function setChord(i) {
+    if (!ac || i === chord) return;
+    chord = i;
+    CHORDS[i].forEach((n, k) => pad.osc[k].frequency.setTargetAtTime(N(n), ac.currentTime, 0.4));
+  }
+  function level() {
+    if (!ac) return;
+    master.gain.cancelScheduledValues(ac.currentTime);
+    master.gain.setTargetAtTime(on && live ? 3.4 : 0, ac.currentTime, 0.15);
+  }
+  // the whole soundtrack, rendered offline to a mono 16-bit WAV (base64)
+  async function renderWav(sr = 44100) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const oac = new OAC(1, Math.ceil(sr * TOTAL), sr);
+    const m = oac.createGain(); m.gain.value = 0.9; m.connect(oac.destination);
+    const pd = makePad(oac, m);
+    pd.gain.gain.setValueAtTime(0, 0); pd.gain.gain.linearRampToValueAtTime(0.045, 2);
+    pd.gain.gain.setValueAtTime(0.045, TOTAL - 2.5); pd.gain.gain.linearRampToValueAtTime(0, TOTAL);
+    SCENES.forEach((sc, i) => { if (i) CHORDS[i].forEach((n, k) => pd.osc[k].frequency.setTargetAtTime(N(n), sc.start, 0.4)); });
+    const v = voices(oac, m);
+    for (const [et, name, arg] of EVENTS) v[name](et + 0.01, arg);
+    const buf = await oac.startRendering();
+    const d = buf.getChannelData(0);
+    let peak = 0;
+    for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+    const gain = peak > 0 ? 0.85 / peak : 1;   // peak-normalise to about -1.4 dBFS
+    const dv = new DataView(new ArrayBuffer(44 + d.length * 2));
+    const tag = (o, str) => { for (let i = 0; i < str.length; i++) dv.setUint8(o + i, str.charCodeAt(i)); };
+    tag(0, 'RIFF'); dv.setUint32(4, 36 + d.length * 2, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, sr, true);
+    dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); tag(36, 'data'); dv.setUint32(40, d.length * 2, true);
+    for (let i = 0; i < d.length; i++) { const x = clamp(d[i] * gain, -1, 1); dv.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    const bytes = new Uint8Array(dv.buffer);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  return {
+    toggle() {
+      if (!ensure()) return false;
+      on = !on;
+      if (on) ac.resume();
+      level();
+      return on;
+    },
+    setPlaying(p) { live = p; if (ac && on && p) ac.resume(); level(); },
+    tick(prev, now) {
+      if (!ac || !on || !live) return;
+      const idx = SCENES.findIndex(sc => now < sc.start + sc.dur);
+      setChord(idx < 0 ? SCENES.length - 1 : idx);
+      if (now - prev > 0.3 || now < prev) return;
+      for (const [et, name, arg] of EVENTS) if (et > prev && et <= now) sfx[name](ac.currentTime + 0.01, arg);
+    },
+    renderWav,
+  };
+})();
+
+// ─── Player ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const seekEl = $('seek'), timeEl = $('time'), playBtn = $('play'), playIcon = $('play-icon');
+const bigplay = $('bigplay'), liveEl = $('live'), soundBtn = $('sound'), stage = cv.parentElement;
+const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const exportMode = location.hash === '#export';
+let clock = 0, playing = false, lastNow = performance.now(), dirty = true, lastCap = '', lastId = '';
+const fmt = s => { s = Math.max(0, Math.floor(s + 1e-6)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+const list = $('chapters');
+list.innerHTML = CHAPTERS.map(c => `<li><button class="chapter" type="button" data-id="${c.id}">
+  <span class="num">${c.num}</span>
+  <span class="ttl"><b>${c.title}</b><span>${fmt(SC[c.id].start)}</span></span>
+  <span class="col"><small>它眼中</small>${c.seen}</span>
+  <span class="col real"><small>其实是</small>${c.real}</span></button></li>`).join('');
+const chapterBtns = [...list.querySelectorAll('.chapter')];
+$('ticks').innerHTML = SCENES.slice(1).map(s => `<i style="left:${(s.start / TOTAL * 100).toFixed(3)}%"></i>`).join('');
+
+function setPlaying(p) {
+  if (p && clock >= TOTAL - 0.05) clock = 0;
+  playing = p;
+  playIcon.setAttribute('d', p ? 'M4 2.5h3v11H4zM9 2.5h3v11H9z' : 'M4 2.5v11l9-5.5z');
+  playBtn.setAttribute('aria-label', p ? '暂停' : '播放');
+  audio.setPlaying(p);
+  lastNow = performance.now();
+  dirty = true;
+}
+function seekTo(v) { clock = clamp(v, 0, TOTAL); dirty = true; }
+function syncUI(info) {
+  seekEl.value = String(Math.round(clock / TOTAL * 1000));
+  seekEl.style.setProperty('--pct', (clock / TOTAL * 100).toFixed(2) + '%');
+  seekEl.setAttribute('aria-valuetext', fmt(clock));
+  timeEl.textContent = fmt(clock) + ' / ' + fmt(TOTAL);
+  const ended = clock >= TOTAL - 0.05;
+  bigplay.hidden = playing || !(clock <= 0.001 || ended);
+  bigplay.querySelector('span').textContent = ended ? '再看一遍' : '播放';
+  if (info.id !== lastId) {
+    lastId = info.id;
+    chapterBtns.forEach(b => b.setAttribute('aria-current', String(b.dataset.id === info.id)));
+  }
+  if (info.cap !== lastCap) { lastCap = info.cap; if (info.cap) liveEl.textContent = info.cap; }
+}
+function frame(now) {
+  if (playing) {
+    const prev = clock;
+    clock = Math.min(TOTAL, clock + Math.min(0.1, (now - lastNow) / 1000));
+    audio.tick(prev, clock);
+    if (clock >= TOTAL) setPlaying(false);
+    dirty = true;
+  }
+  lastNow = now;
+  if (dirty) { fit(); syncUI(render(clock)); dirty = false; }
+  requestAnimationFrame(frame);
+}
+
+playBtn.addEventListener('click', () => setPlaying(!playing));
+bigplay.addEventListener('click', () => setPlaying(true));
+cv.addEventListener('click', () => setPlaying(!playing));
+$('restart').addEventListener('click', () => { seekTo(0); setPlaying(true); });
+seekEl.addEventListener('input', () => seekTo(seekEl.value / 1000 * TOTAL));
+chapterBtns.forEach(b => b.addEventListener('click', () => {
+  seekTo(SC[b.dataset.id].start + 0.01);
+  setPlaying(true);
+  stage.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+}));
+soundBtn.addEventListener('click', () => {
+  const on = audio.toggle();
+  soundBtn.setAttribute('aria-pressed', String(on));
+  soundBtn.setAttribute('aria-label', on ? '关闭声音' : '打开声音');
+  $('sound-waves').setAttribute('d', on ? 'M10.6 5.3a3.4 3.4 0 0 1 0 5.4M12.7 3.4a6 6 0 0 1 0 9.2' : 'M11 5.5l3 5M14 5.5l-3 5');
+});
+$('full').addEventListener('click', () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
+  } catch (e) { /* fullscreen is optional */ }
+});
+document.addEventListener('keydown', e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const tag = e.target.tagName;
+  if (e.key === ' ' && tag !== 'BUTTON') { e.preventDefault(); setPlaying(!playing); }
+  else if (tag !== 'INPUT' && e.key === 'ArrowRight') { e.preventDefault(); seekTo(clock + 5); }
+  else if (tag !== 'INPUT' && e.key === 'ArrowLeft') { e.preventDefault(); seekTo(clock - 5); }
+});
+window.addEventListener('resize', () => { dirty = true; });
+if (window.ResizeObserver) new ResizeObserver(() => { dirty = true; }).observe(cv);
+
+// load exactly the glyphs the film uses, then redraw
+const ALL_TEXT = JSON.stringify([CAPTIONS, CHAPTERS.map(c => c.title), MSG, SAY1, SAY2, COMMITS, FRESH, MORE_LETTERS, FRAG_POOL, CODE, TESTS, SKY_VERBS])
+  + '第一二三四五六幕终章天上掉下来的信文件之城代码的地形测试花园天灯折起来的记忆你的世界小橘块眼中的世界一部关于吉祥物的像素短片';
+const fontsReady = document.fonts && document.fonts.load
+  ? Promise.all([
+      document.fonts.load(F(20, 'serif', 600), ALL_TEXT), document.fonts.load(F(20, 'serif', 900), ALL_TEXT),
+      document.fonts.load(F(20, 'sans', 400), ALL_TEXT), document.fonts.load(F(20, 'sans', 500), ALL_TEXT),
+      document.fonts.load(F(20, 'mono', 400), ALL_TEXT), document.fonts.load(F(20, 'mono', 700), ALL_TEXT),
+    ]).catch(() => {}).then(() => { dirty = true; })
+  : Promise.resolve();
+
+// for rendering the film to video, frame by frame
+window.__film = {
+  total: TOTAL,
+  scenes: SCENES.map(s => ({ id: s.id, start: s.start, dur: s.dur })),
+  ready: () => fontsReady,
+  size: (w, h) => setFixedSize(w, h),
+  frame: t => { render(t); },
+  soundtrack: () => audio.renderWav(),
+};
+
+const deep = SC[location.hash.slice(1)];
+if (deep) clock = deep.start + 0.01;
+requestAnimationFrame(frame);
+if (!reduceMotion && !exportMode) setPlaying(true);
+})();
+</script>
+</body>
+</html>
