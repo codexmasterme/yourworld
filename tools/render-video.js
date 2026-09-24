@@ -9,6 +9,8 @@
 //   node tools/render-video.js [page.html] [out.mp4] [width] [height]
 //
 // Defaults: index.html → media/yourworld.mp4, civilization.html → media/civilization.mp4, 1920 × 1080.
+// CRF=27 trades a little detail for a much smaller file (the paper grain in
+// civilization.html is expensive to encode); the default is 21.
 //
 // Needs ffmpeg on PATH, or FFMPEG=/path/to/ffmpeg.
 // Behind a TLS-intercepting proxy the browser doesn't trust, set
@@ -26,6 +28,7 @@ const name = path.basename(pageFile).replace(/\.html?$/, '');
 const out = path.resolve(args[0] || path.join(root, 'media', (name === 'index' ? 'yourworld' : name) + '.mp4'));
 const W = Number(args[1] || 1920), H = Number(args[2] || 1080), FPS = 30, BATCH = 12;
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
+const CRF = String(Number(process.env.CRF) || 21);
 
 async function routeFontsViaCurl(page) {
   const cache = new Map();
@@ -34,7 +37,10 @@ async function routeFontsViaCurl(page) {
     try {
       if (!cache.has(url)) {
         const ua = route.request().headers()['user-agent'];
-        cache.set(url, execFileSync('curl', ['-sSfL', '--max-time', '30', '-A', ua, url], { maxBuffer: 64 << 20 }));
+        for (let tries = 1; !cache.has(url); tries++) {
+          try { cache.set(url, execFileSync('curl', ['-sSfL', '--max-time', '60', '-A', ua, url], { maxBuffer: 64 << 20 })); }
+          catch (e) { if (tries >= 3) throw e; }
+        }
       }
       const css = url.includes('googleapis');
       await route.fulfill({
@@ -53,7 +59,7 @@ async function routeFontsViaCurl(page) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   if (process.env.FONTS_VIA_CURL) await routeFontsViaCurl(page);
-  await page.goto('file://' + path.resolve(root, pageFile) + '#export');
+  await page.goto('file://' + path.resolve(root, pageFile) + '#export', { timeout: 180000 });
   await page.waitForFunction(() => window.__film);
   await page.evaluate(() => window.__film.ready());
   const total = await page.evaluate(() => window.__film.total);
@@ -67,8 +73,8 @@ async function routeFontsViaCurl(page) {
     '-y', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
     '-i', wav, '-map', '0:v', '-map', '1:a',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-tune', 'animation', '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac', '-b:a', '128k', '-shortest', '-movflags', '+faststart', out,
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-tune', 'animation', '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', out,
   ], { stdio: ['pipe', 'inherit', 'inherit'] });
   const exited = new Promise(resolve => ff.on('close', resolve));
 
