@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// Render index.html to a video file.
+// Render one of the films (index.html, civilization.html) to a video file.
 //
-// Every frame of the film is a pure function of time, so this steps it at
+// Every frame of a film is a pure function of time, so this steps it at
 // 30 fps in headless Chromium, pipes the frames to ffmpeg, and muxes in the
 // soundtrack that the page's own synth renders offline.
 //
 //   npm i playwright && npx playwright install chromium
-//   node tools/render-video.js [out.mp4] [width] [height]
+//   node tools/render-video.js [page.html] [out.mp4] [width] [height]
+//
+// Defaults: index.html → media/yourworld.mp4, civilization.html → media/civilization.mp4, 1920 × 1080.
 //
 // Needs ffmpeg on PATH, or FFMPEG=/path/to/ffmpeg.
 // Behind a TLS-intercepting proxy the browser doesn't trust, set
@@ -18,8 +20,11 @@ const { spawn, execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const root = path.resolve(__dirname, '..');
-const out = path.resolve(process.argv[2] || path.join(root, 'media', 'yourworld.mp4'));
-const W = Number(process.argv[3] || 1920), H = Number(process.argv[4] || 1080), FPS = 30, BATCH = 12;
+const args = process.argv.slice(2);
+const pageFile = args[0] && /\.html?$/.test(args[0]) ? args.shift() : 'index.html';
+const name = path.basename(pageFile).replace(/\.html?$/, '');
+const out = path.resolve(args[0] || path.join(root, 'media', (name === 'index' ? 'yourworld' : name) + '.mp4'));
+const W = Number(args[1] || 1920), H = Number(args[2] || 1080), FPS = 30, BATCH = 12;
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 
 async function routeFontsViaCurl(page) {
@@ -48,7 +53,7 @@ async function routeFontsViaCurl(page) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   if (process.env.FONTS_VIA_CURL) await routeFontsViaCurl(page);
-  await page.goto('file://' + path.join(root, 'index.html') + '#export');
+  await page.goto('file://' + path.resolve(root, pageFile) + '#export');
   await page.waitForFunction(() => window.__film);
   await page.evaluate(() => window.__film.ready());
   const total = await page.evaluate(() => window.__film.total);

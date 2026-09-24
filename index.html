@@ -121,6 +121,9 @@
 
   footer { display: grid; gap: 6px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
   footer p { margin: 0; max-width: 60em; }
+  footer a { color: var(--muted); text-underline-offset: 3px; }
+  footer a:hover { color: var(--text); }
+  footer a:focus-visible { outline: 2px solid var(--permission); outline-offset: 2px; }
   .inline-clawd { width: 1.7em; height: auto; vertical-align: -0.15em; margin-inline: 0.15em; }
   kbd {
     padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
@@ -193,7 +196,7 @@
     <p><kbd>空格</kbd> 播放 / 暂停　<kbd>←</kbd> <kbd>→</kbd> 快退 / 快进 5 秒　点画面也可以暂停</p>
     <p>这是一部非官方的同人短片。小橘块在 Claude Code 的源码里叫 clawd，就是启动时终端里那只
       <svg class="inline-clawd" viewBox="0 0 16 10" aria-hidden="true" shape-rendering="crispEdges"><path fill="#d77757" d="M2 0h12v8H2zM0 4h16v2H0zM3 8h1v2H3zM5 8h1v2H5zM10 8h1v2h-1zM12 8h1v2h-1z"/><path fill="#000" d="M4 2h1v2H4zM11 2h1v2h-1z"/></svg>
-      小家伙。片中它的像素造型、身上的橘色、头顶转圈的小星星和 “Pondering…” 这类词，都照着 Claude Code 自己的界面来画。</p>
+      小家伙。片中它的像素造型、身上的橘色、头顶转圈的小星星和 “Pondering…” 这类词，都照着 Claude Code 自己的界面来画。另一部：<a id="other-film" href="civilization.html">《小橘块眼中的人类文明》</a>。</p>
   </footer>
 </main>
 <script>
@@ -1696,6 +1699,7 @@ const audio = (() => {
   function voices(ac, out) {
     const tone = (f, t0, dur, type = 'sine', g0 = 0.1, att = 0.006) => {
       const o = ac.createOscillator(), g = ac.createGain();
+      g.gain.value = 0;   // silent until its envelope starts, or the first sample clicks
       o.type = type; o.frequency.value = f;
       g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(g0, t0 + att); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + dur + 0.05);
@@ -1707,7 +1711,7 @@ const audio = (() => {
       const src = ac.createBufferSource(); src.buffer = buf;
       const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
       f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
-      const g = ac.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(g0, t0 + dur * 0.35); g.gain.linearRampToValueAtTime(0, t0 + dur);
+      const g = ac.createGain(); g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(g0, t0 + dur * 0.35); g.gain.linearRampToValueAtTime(0, t0 + dur);
       src.connect(f); f.connect(g); g.connect(out); src.start(t0); src.stop(t0 + dur);
     };
     let k = 0;
